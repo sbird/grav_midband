@@ -62,6 +62,20 @@ class LISASensitivity(Sensitivity):
 
 class LIGOSensitivity(Sensitivity):
     """LIGO sensitivity curve as a function of frequency"""
+    def __init__(self):
+        super().__init__()
+        #Sensitivity data digitised from design sensitivity shown in plot here
+        #https://www.ligo.org/science/Publication-ObservingScenario/index.php
+        aligo = np.loadtxt("aLIGO_final_sensitivity.dat")
+        self.aligointp = scipy.interpolate.interp1d(aligo[:,0], aligo[:,1])
+
+    def response(self, freq):
+        """Response function. We don't use this here."""
+        return np.ones_like(freq)
+
+    def TDInoise(self, freq):
+        """Sensitivity curve."""
+        return self.aligointp(freq)
 
 class SGWB:
     """Class to contain SGWBs.
