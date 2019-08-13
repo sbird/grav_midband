@@ -114,6 +114,47 @@ class SGWB:
         like = - 1 * self.obstime * np.trapz((model / (self.lisa + self.ligo))**2, x=self.freq)
         return like
 
+class BinaryBHGWB:
+    """Model for the binary black hole background, fiducial version from LIGO."""
+    def __init__(self):
+        self.ureg = pint.UnitRegistry()
+        self.Normunit = self.ureg("Gpc-3 yr-1")
+        self.b = 1.5
+        self.a = 1.92
+        self.zm = 2.6
+        # This is the Ajith 2011 (0909.2867) template for the spectral energy density of the black holes *at source* redshift.
+        # This needs to be adjusted to the observed frame redshift.
+        #Template shape is: frequency, redshift, dEdf
+        self.Ajith_template = np.loadtxt("dEdfs_FULL_fobs_dndM_2p35_mmin_3msun_mmax_100msun_Ajith_spectrum.dat")
+        self.Ajithintp = scipy.interpolate.interp2d(self.Ajith_template[:,0], self.Ajith_template[:,1], self.Ajith_template[:,2])
+
+    def chi(self, z):
+        """Comoving distance to z."""
+        Hub = 70 * self.ureg("km/s/Mpc")
+        integ = lambda z_: 1./np.sqrt(0.3 * (1+z_)**3 + 0.7)
+        return (self.ureg("speed_of_light") / Hub  * scipy.integrate.quad(integ, 0, z)).to_base_units()
+
+    def dLumin(self, z):
+        """Luminosity distance"""
+        return (1+z) * self.chi(z)
+
+    def rhocrit(self):
+        """Critical energy density at z=0 in kg/m^3"""
+        rhoc = 3 * (70 * self.ureg('km/s/Mpc'))**2
+        return rhoc / 8 / math.pi/ self.ureg.newtonian_constant_of_gravitation
+
+    def Rsfrnormless(self, z):
+        """Black hole merger rate as a function of the star formation rate. Unnormalized."""
+        return self.a * np.exp(self.b * (z - self.zm)) / (self.a - self.b + self.b * np.exp(self.a*(z - self.zm)))
+
+    def OmegaGW(self, freq, Norm):
+        """OmegaGW as a function of frequency."""
+        Hub = 70 * self.ureg("km/s/Mpc")
+        #Integrand as a function of redshift, taking care of the redshifting factors.
+        _omegagwz = lambda zz: self.Rsfrnormless(zz) * self.Ajithintp(freq, zz) / ((1+zz) * np.sqrt(0.3 * (1+zz)**3 + 0.7))
+        omegagw_unnormed = scipy.integrate.quad(_omegagwz, 0.01, 20)
+        #See eq. 2 of 1609.03565
+        return (Norm * self.Normunit / Hub * freq / self.ureg("speed_of_light")**2 / self.rhocrit()).to_base_units() * omegagw_unnormed
 
 def gcorr(x):
     """Corrections to radiation density from freezeout"""
@@ -161,7 +202,6 @@ class CosmicStringGWB:
 
     def OmegaGW(self, freq, Gmu):
         """SGWB power (omega_gw) for a string forming during radiation domination."""
-        #What is the 0.1/30 term?
         P3R = np.sum([self.OmegaGWMk(Gmu, freq, k) for k in range(1,30)], axis=1)
         assert np.size(P3R) == np.size(freq)
         return P3R
