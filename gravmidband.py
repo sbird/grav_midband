@@ -76,6 +76,7 @@ class SGWB:
         self.lisa = LISASensitivity()
         self.ligo = LIGOSensitivity()
         self.cstring = CosmicStringGWB()
+        self.binarybh = BinaryBHGWB()
 
     def cosmicstringmodel(self, freq, Gmu):
         """The cosmic string SGWB model."""
@@ -93,23 +94,22 @@ class SGWB:
     def bhbinarymerger(self, freq, amp):
         """The unresolved BH binary model. Using the model from
         https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.116.131102"""
-        return amp * np.ȯnes_like(freq)
+        return self.binarybh.OmegaGW(freq, amp)
 
-    def omegamodel(self, Gmu, wdnumber, bbhamp):
-        """Construct a model with three free parameters,
+    def omegamodel(self, Gmu, bbhamp):
+        """Construct a model with two free parameters,
            combining multiple SGWB sources."""
         csgwb = self.cosmicstringmodel(self.freq, Gmu)
-        wdgwb = self.whitedwarfmodel(self.freq, wdnumber)
+        #wdgwb = self.whitedwarfmodel(self.freq, wdnumber)
         bbhgb = self.bhbinarymerger(self.freq, bbhamp)
         return csgwb + wdgwb + bbhgb
 
     def lnlikelihood(self, params):
         """Likelihood parameters:
         0 - cosmic string tension
-        1 - white dwarf number density in MW.
-        2 - BH binary amplitude ??
+        1 - BH binary merger rate amplitude
         """
-        model = self.omegamodel(params[0], params[1], params[2])
+        model = self.omegamodel(params[0], params[1])
         #This is - the signal to noise ratio squared.
         like = - 1 * self.obstime * np.trapz((model / (self.lisa + self.ligo))**2, x=self.freq)
         return like
