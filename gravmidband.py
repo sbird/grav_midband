@@ -6,76 +6,52 @@ import pint
 import scipy.interpolate
 import scipy.integrate
 
+ureg = pint.UnitRegistry()
+
+def hz(zz):
+    return np.sqrt(0.3 * (1+zz)**3 + 0.7)
+
 class Sensitivity:
-    """Base class for instrument sensitivities"""
+    """Base class for instrument sensitivities.
+       For conventions used see 1408.0740"""
     def __init__(self):
-        self.ureg = pint.UnitRegistry()
+        self.hub = ((70 * ureg('km/s/Mpc')).to("1/s").magnitude)
 
-    def TDInoise(self, freq):
-        """Noise power"""
-        raise NotImplementedError
-
-    def response(self, freq):
-        """The response function."""
-        raise NotImplementedError
-
-    def _Sn(self, freq):
-        """This is the sensitivity"""
-        return self.TDInoise(freq) / self.response(freq)
-
-    def omegasens(self, freq):
+    def omegadens(self):
         """This is the energy density sensitivity"""
-        return 4 * math.pi**2 / 3 / (70 * self.ureg('km/s/Mpc'))**2 * freq**3 * self._Sn(freq)
+        ff, psd = self.PSD()
+        return ff, 4 * math.pi**2 / 3 / self.hub**2 * ff**3 * psd**2
 
 class LISASensitivity(Sensitivity):
-    """LISA sensitivity curve as a function of frequency from 1906.09244"""
-    def __init__(self):
+    """LISA sensitivity curve as a function of frequency
+       from http://www.srl.caltech.edu/cgi-bin/cgiCurve"""
+    def __init__(self, wd=False):
         super().__init__()
-        #LISA arm length in km
-        self.armlength = 2.5e6* self.ureg('km')
-        #Free parameters of the noise function.
-        self.PP = 15
-        self.AA = 3
+        if wd:
+            self.lisa = np.loadtxt("lisa_sensitivity_curve_wd.dat")
+        else:
+            self.lisa = np.loadtxt("lisa_sensitivity_curve_nowd.dat")
+        # Output Curve type is Root Spectral Density, per root Hz
+        # f [Hz]    hf [Hz^(-1/2)]
+        self.lisaintp = scipy.interpolate.interp1d(self.lisa[:,0], self.lisa[:,1])
 
-    def Poms(self, freq):
-        """Optical metrology noise power in s. Eq. 2.1"""
-        lscale = (2 * math.pi * freq / self.ureg('speed_of_light').to('km/s'))
-        ffdep = ( 1 + (2 * self.ureg('mHz')/freq)**4)
-        return self.PP**2 * ( 1 * self.ureg('pm'))**2 / (1 * self.ureg("Hz")) * ffdep * lscale**2
-
-    def Pacc(self, freq):
-        """Mass acceleration noise. Eq 2.1"""
-        ffdep = (1 + (0.4 * self.ureg('mHz')/freq)**2) * (1 + (freq / (8*self.ureg('mHz')))**4)
-        lscale = (2 * math.pi * freq / self.ureg('speed_of_light').to('km/s'))
-        invfreq = (1*self.ureg('s'))/(2 * math.pi * freq)
-        return self.AA**2 * ffdep * (1 * self.ureg('fm')**2) * invfreq**4 * lscale**2
-
-    def TDInoise(self, freq):
-        """TDI X-channel single-sided PSD. Eq. 2.2"""
-        dlesswave = 2 * math.pi * freq * self.armlength / self.ureg('speed_of_light').to('km/s')
-        return 16 * np.sin(dlesswave)**2* (self.Poms(freq) + (3 + np.cos(2 * dlesswave)) * self.Pacc(freq))
-
-    def response(self, freq):
-        """The response function for LISA eq. 2.10 from LISA internal."""
-        dlesswave = 2 * math.pi * freq * self.armlength / self.ureg('speed_of_light').to('km/s')
-        return 16 * np.sin(dlesswave)**2* 0.3 * dlesswave**2 / (1 + 0.6 * dlesswave**2)
+    def PSD(self):
+        """Get the root power spectral density in Hz^[-1/2]"""
+        return self.lisa[:,0], self.lisa[:,1]
 
 class LIGOSensitivity(Sensitivity):
     """LIGO sensitivity curve as a function of frequency"""
     def __init__(self):
         super().__init__()
-        #Sensitivity data digitised from design sensitivity shown in plot here
-        #https://www.ligo.org/science/Publication-ObservingScenario/index.php
-        aligo = np.loadtxt("aLIGO_final_sensitivity.dat")
-        self.aligointp = scipy.interpolate.interp1d(aligo[:,0], aligo[:,1])
+        #Power spectral density from
+        #https://dcc.ligo.org/public/0149/T1800044/005/aLIGODesign.txt
+        #f(Hz)     hstrain(Hz^-1/2)
+        self.aligo = np.loadtxt("aLIGODesign.txt")
+        self.aligointp = scipy.interpolate.interp1d(self.aligo[:,0], self.aligo[:,1])
 
-    def response(self, freq):
-        """Response function. We don't use this here."""
-        return np.ones_like(freq)
-
-    def TDInoise(self, freq):
-        """Sensitivity curve."""
-        return self.aligointp(freq)
+    def PSD(self):
+        """Get the root power spectral density in Hz^[-1/2]"""
+        return self.aligo[:,0], self.aligo[:,1]
 
 class SGWB:
     """Class to contain SGWBs.
@@ -84,11 +60,13 @@ class SGWB:
     minfreq - minimum LISA frequency, 10^-5 Hz
     """
     def __init__(self, obstime=3, maxfreq = 400, minfreq = 1e-5, nbins=1000):
-        self.ureg = pint.UnitRegistry()
+        self.ureg = ureg
         self.freq = np.logspace(np.log10(minfreq), np.log10(maxfreq), nbins) * self.ureg('Hz')
         self.obstime = obstime * self.ureg('year')
         self.lisa = LISASensitivity()
+        self.lisafreq, self.lisapsd = self.lisa.omegasens()
         self.ligo = LIGOSensitivity()
+        self.ligofreq, self.ligopsd = self.ligo.omegasens()
         self.cstring = CosmicStringGWB()
         self.binarybh = BinaryBHGWB()
 
@@ -110,12 +88,12 @@ class SGWB:
         https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.116.131102"""
         return self.binarybh.OmegaGW(freq, amp)
 
-    def omegamodel(self, Gmu, bbhamp):
+    def omegamodel(self, freq, Gmu, bbhamp):
         """Construct a model with two free parameters,
            combining multiple SGWB sources."""
-        csgwb = self.cosmicstringmodel(self.freq, Gmu)
+        csgwb = self.cosmicstringmodel(freq, Gmu)
         #wdgwb = self.whitedwarfmodel(self.freq, wdnumber)
-        bbhgb = self.bhbinarymerger(self.freq, bbhamp)
+        bbhgb = self.bhbinarymerger(freq, bbhamp)
         return csgwb + wdgwb + bbhgb
 
     def lnlikelihood(self, params):
@@ -131,8 +109,8 @@ class SGWB:
 class BinaryBHGWB:
     """Model for the binary black hole background, fiducial version from LIGO."""
     def __init__(self):
-        self.ureg = pint.UnitRegistry()
-        self.Normunit = self.ureg("Gpc-3 yr-1")
+        self.ureg = ureg
+        self.Normunit = 1*self.ureg("Gpc^-3/year")
         self.b = 1.5
         self.a = 1.92
         self.zm = 2.6
@@ -140,13 +118,16 @@ class BinaryBHGWB:
         # This needs to be adjusted to the observed frame redshift.
         #Template shape is: frequency, redshift, dEdf
         self.Ajith_template = np.loadtxt("dEdfs_FULL_fobs_dndM_2p35_mmin_3msun_mmax_100msun_Ajith_spectrum.dat")
-        self.Ajithintp = scipy.interpolate.interp2d(self.Ajith_template[:,0], self.Ajith_template[:,1], self.Ajith_template[:,2])
+        #self.Ajithintp = scipy.interpolate.interp2d(self.Ajith_template[:,0], self.Ajith_template[:,1], self.Ajith_template[:,2], kind='linear')
+        self.cc = (self.ureg("speed_of_light").to("m/s")).magnitude
+        self.GG = ((1*self.ureg.newtonian_constant_of_gravitation).to_base_units()).magnitude
 
     def chi(self, z):
         """Comoving distance to z."""
         Hub = 70 * self.ureg("km/s/Mpc")
         integ = lambda z_: 1./np.sqrt(0.3 * (1+z_)**3 + 0.7)
-        return (self.ureg("speed_of_light") / Hub  * scipy.integrate.quad(integ, 0, z)).to_base_units()
+        chi,err = scipy.integrate.quad(integ, 0, z)
+        return (self.ureg("speed_of_light") / Hub  * chi).to_base_units()
 
     def dLumin(self, z):
         """Luminosity distance"""
@@ -161,14 +142,60 @@ class BinaryBHGWB:
         """Black hole merger rate as a function of the star formation rate. Unnormalized."""
         return self.a * np.exp(self.b * (z - self.zm)) / (self.a - self.b + self.b * np.exp(self.a*(z - self.zm)))
 
-    def OmegaGW(self, freq, Norm):
+    def fmergerV2(self, m1, m2):
+        """Merger phase frequency"""
+        fmerg = 0.04*self.cc**3/(self.GG*(m1 + m2)* 1.989e30)
+        return fmerg #.to("Hz")
+
+    def dEdfsMergV2(self, m1, m2, femit):
+        """Energy per unit strain in merger phase"""
+        ms = 1.989e30 #* self.ureg("kg")
+        return 1./3.*(math.pi**2*self.GG**2)**(
+ 1/3)*((m1*m2 * ms**2 )/(m1*ms + m2*ms)**(1/3))*femit**(2./3)/self.fmergerV2(m1, m2)
+
+    def dEdfsInsp(self, m1, m2, femit):
+        """Energy per unit strain in inspiral phase"""
+        ms = 1.989e30 #* self.ureg("kg")
+        return 1./3.*(math.pi**2*self.GG**2/femit)**(1/3)*((m1*m2 * ms**2 )/(m1*ms + m2*ms)**(1/3))
+
+    def fqnrV2(self, m1, m2):
+        """Ringdown phase frequency."""
+        ms = 1.989e30 #* self.ureg("kg"))
+        fqnr = 0.915*(self.cc**3*(1. - 0.63*(1. - 0.67)**(3/10.)))/(2*math.pi*self.GG*(m1 + m2)*ms)
+        return fqnr
+
+    def dEdfstot(self, femit):
+        """Total energy per unit strain in all phases. This is computed with a weighted sum of the first three events."""
+        tot = 0
+        weights = [3.4, 9.4,3.1]
+        minm = [29.1, 23, 14.2]
+        maxm = [36.2, 13, 7.5]
+        for i in range(3):
+            fmerg = self.fmergerV2(minm[i], maxm[i])
+            fqnr = self.fqnrV2(minm[i], maxm[i])
+            wgt = 0
+            if femit > fmerg and femit < fqnr:
+                wgt = self.dEdfsMergV2(minm[i], maxm[i], femit)
+            elif femit < fmerg:
+                wgt = self.dEdfsInsp(minm[i], maxm[i], femit)
+            tot += weights[i]/15.9 * wgt
+        return tot #.to_base_units().magnitude
+
+    def _omegagwz(self, zz, ff):
+        """Integrand as a function of redshift, taking care of the redshifting factors."""
+        femit = ff * (1 + zz)
+        return self.Rsfrnormless(zz) * self.dEdfstot(femit) / ((1+zz) * hz(zz))
+
+    def OmegaGW(self, freq, Norm=56.):
         """OmegaGW as a function of frequency."""
         Hub = 70 * self.ureg("km/s/Mpc")
-        #Integrand as a function of redshift, taking care of the redshifting factors.
-        _omegagwz = lambda zz: self.Rsfrnormless(zz) * self.Ajithintp(freq, zz) / ((1+zz) * np.sqrt(0.3 * (1+zz)**3 + 0.7))
-        omegagw_unnormed = scipy.integrate.quad(_omegagwz, 0.01, 20)
+        omegagw_unnormed = [scipy.integrate.quad(self._omegagwz, 0.01, 10, args=(ff,))[0] for ff in freq]
         #See eq. 2 of 1609.03565
-        return (Norm * self.Normunit / Hub * freq / self.ureg("speed_of_light")**2 / self.rhocrit()).to_base_units() * omegagw_unnormed
+        freq = freq * self.ureg("Hz")
+        normfac = (Norm * self.Normunit / Hub * freq / self.ureg("speed_of_light")**2 / self.rhocrit())
+        normfac = normfac.to_base_units()
+        #assert normfac.check("[]")
+        return  normfac.magnitude * omegagw_unnormed
 
 def gcorr(x):
     """Corrections to radiation density from freezeout"""
@@ -196,8 +223,8 @@ def gcorr(x):
 class CosmicStringGWB:
     """Model for the gravitational wave background from cosmic strings. From Yanou's Mathematica notebook and 1808.08968."""
     def __init__(self):
-        self.hub = 0.7
-        self.ureg = pint.UnitRegistry()
+        self.hub = (0.7 * 100 * ureg("km/s/Mpc").to_base_units()).magnitude
+        self.ureg = ureg
         self.HzoverGev = (1*self.ureg.planck_constant/2/math.pi).to('s*GeV')
         self.CeffM = 0.5
         self.CeffR = 5.7
@@ -207,16 +234,18 @@ class CosmicStringGWB:
         #self.t0 = (13.8e9 * self.ureg('years')).to('s') / HzoverGev
         self.aaeq = 1/(1 + 3360)
         self.amin = 1e-20
-        self.aatab = np.logspace(np.log10(self.amin), 0, 500)
-        self.tttab = [self.ttint(a) for a in self.aatab]
+        self.amax = 1e-5
+        self.aatab = np.logspace(np.log10(self.amin), np.log10(self.amax), 300)
+        #Must be first
         self.gcorrtab = [self.gcorr(a) for a in self.aatab]
-        self.ttintp = scipy.interpolate.interp1d(np.log(self.aatab), np.log(self.tttab))
-        self.aaintp = scipy.interpolate.interp1d(np.log(self.tttab), np.log(self.aatab))
         self.gcorrintp = scipy.interpolate.interp1d(np.log(self.aatab), np.log(self.gcorrtab))
+        self.tttab = [self.ttint(a) for a in self.aatab]
+        self.ttintp = scipy.interpolate.interp1d(np.log(self.aatab), self.tttab)
+        self.aaintp = scipy.interpolate.interp1d(self.tttab, np.log(self.aatab))
 
     def OmegaGW(self, freq, Gmu):
         """SGWB power (omega_gw) for a string forming during radiation domination."""
-        P3R = np.sum([self.OmegaGWMk(Gmu, freq, k) for k in range(1,30)], axis=1)
+        P3R = [np.sum([self.OmegaGWMk(Gmu, ff, k) for k in range(1,30)]) for ff in freq]
         assert np.size(P3R) == np.size(freq)
         return P3R
 
@@ -228,12 +257,12 @@ class CosmicStringGWB:
 
     def ttint(self, aa):
         """Time in s between beginning and scale factor a."""
-        integ = lambda aa: ((1/(aa * self.Hubble(aa))).to('s')).magnitude
-        return scipy.integrate.quad(integ.magn, self.amin,aa)
+        integ = lambda aa: 1/(aa * self.Hubble(aa)) #.to('s')).magnitude
+        return scipy.integrate.romberg(integ, self.amin,aa, divmax=100)
 
     def time(self, aa):
         """Get the time at scale factor a (pre-computed) in s"""
-        return np.exp(self.ttintp(np.log(aa)))*self.ureg('s')
+        return self.ttintp(np.log(aa))
 
     def tik(self, aa, Gmu, freq, k):
         """Formation time of loops with mode number k in s."""
@@ -245,27 +274,27 @@ class CosmicStringGWB:
         #This should be a root of a T / T0 = (g(T)/g(T0))**(1/3)
         T0 = 2.72556666/(1.16045e13) #CMB temp in GeV
         func = lambda T: a * T * (gcorr(T)/gcorr(T0))**(1./3) - T0
-        sol = scipy.optimize.root_scalar(func, x0=T0/a)
+        sol = scipy.optimize.root_scalar(func, x0=T0/a, x1=T0/a*100)
         Ta = sol.root
         return gcorr(Ta)/gcorr(T0)
 
     def Hubble(self, a):
         """Hubble expansion rate"""
-        return self.hub * 100 * np.sqrt(0.7 + 0.3/a**3 + np.exp(self.gcorrintp(np.log(a)))**(-1/3) * 8.5744e-5/a**4) * self.ureg("km/s/Mpc")
+        return self.hub * np.sqrt(0.7 + 0.3/a**3 + np.exp(self.gcorrintp(np.log(a)))**(-1/3) * 8.5744e-5/a**4)
 
     def OmegaGWMkintegrand(self, aa, Gmu, freq, k):
         """Integrand from eq. 2.14"""
         aat0 = 1
-        tik = self.tik(aa/aat0, Gmu, freq, k)
-        aatik = self.aaintp(np.log(tik.to('s').magnitude))
+        tik = self.tik(aa/aat0, Gmu, freq, k) # * self.ureg("s")
+        aatik = np.exp(self.aaintp(tik))
         #We can neglect the heaviside function for tF because tF = 0.
         #Units of s^-4
         return self.Ceff(aatik) / tik**4 * (aa/aat0)**5 * (aatik/aa)**3 * (aa > aatik)
 
     def rhocrit(self):
-        """Critical energy density at z=0 in kg/m^3"""
-        rhoc = 3 * (self.hub * 100 * self.ureg('km/s/Mpc'))**2
-        return rhoc / 8 / math.pi/ self.ureg.newtonian_constant_of_gravitation
+        """Critical energy density at z=0 in kg/m^3 * G"""
+        rhoc = 3 * (self.hub)**2 #* self.ureg("1/s"))**2
+        return rhoc / 8 / math.pi #/ self.ureg.newtonian_constant_of_gravitation
 
     def Gammak(self, k):
         """Mode-dependent Gamma"""
@@ -273,12 +302,13 @@ class CosmicStringGWB:
 
     def OmegaGWMk(self, Gmu, freq, k):
         """Eq. 2.14 of 1808.08968"""
-        GG = self.ureg.newtonian_constant_of_gravitation
-        prefac = (2 * k / freq/ self.rhocrit()) * self.Fa * self.Gammak(k) * Gmu**2 / GG / (self.alpha * (self.alpha + self.Gamma * Gmu))
+        #GG = self.ureg.newtonian_constant_of_gravitation
+        #Units of s^3
+        prefac = (2 * k / freq / self.rhocrit()) * self.Fa * self.Gammak(k) * Gmu**2 / (self.alpha * (self.alpha + self.Gamma * Gmu))
         #Multiply by a jacobian factor dt/da = 1/da/dt = 1/(aH) so we can integrate da
-        omint = lambda aa: (prefac * self.OmegaGWMkintegrand(aa, Gmu, freq, k) / (aa * self.Hubble(aa))).to_base_units()
+        omint = lambda aa: (prefac * self.OmegaGWMkintegrand(aa, Gmu, freq, k) / (aa * self.Hubble(aa)))
         #Check dimensionless
-        assert omint(0.5).dimensionality == self.ureg('').dimensionality
-        omintmag = lambda aa: omint(aa).magnitude
-        OmegaGW = scipy.integrate.quad(omintmag, self.amin, 1)
+        #assert omint(0.5).check("[]")
+        #omintmag = lambda aa: omint(aa).magnitude
+        OmegaGW, err = scipy.integrate.quad(omint, 1.1*self.amin, 0.9*self.amax)
         return OmegaGW
