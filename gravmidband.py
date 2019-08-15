@@ -9,18 +9,40 @@ import scipy.integrate
 ureg = pint.UnitRegistry()
 
 def hz(zz):
+    """Dimensionless part of the hubble rate"""
     return np.sqrt(0.3 * (1+zz)**3 + 0.7)
 
 class Sensitivity:
     """Base class for instrument sensitivities.
        For conventions used see 1408.0740"""
     def __init__(self):
-        self.hub = ((70 * ureg('km/s/Mpc')).to("1/s").magnitude)
+        self.hub = ((67.9 * ureg('km/s/Mpc')).to("1/s").magnitude)
+        self.length = 1
 
     def omegadens(self):
-        """This is the energy density sensitivity"""
+        """This is the omega_gw that would match
+        the noise power spectral density of the detector system."""
+        #Root PSD
         ff, psd = self.PSD()
-        return ff, 4 * math.pi**2 / 3 / self.hub**2 * ff**3 * psd**2
+        #This is the sd. on Omega_GW in sqrt(sensitivity per hertz per second)
+        #This is the total energy in GW with the PSD given by the design curve.
+        #This is not quite the thing plotted in various data papers,
+        #which use the one-sided PSDs for two detectors
+        #and multiply by a tensor overlap function.
+        #It seems, comparing with Figure 3 of 1903.02886 that our approximation
+        #over-estimates sensitivity at high frequencies where the overlap function
+        #is small, and underestimates it at low frequencies where it is large.
+        #Since in any case by the time this forecast happens we will have
+        #different detectors with a different and unknown overlap function, ignore this.
+        omegagw = 2 * math.pi**2 / 3 / self.hub**2 * ff**3 * psd**2
+        # We assume sampling at 1/32 Hz following 1903.02886
+        # and a design run of 2 years.
+        omegagw /= np.sqrt(2 * self.length * 1./32)
+        return ff, omegagw
+
+    def PSD(self):
+        """Root power spectral density in Hz^{-1/2}"""
+        raise NotImplementedError
 
 class LISASensitivity(Sensitivity):
     """LISA sensitivity curve as a function of frequency
@@ -33,7 +55,9 @@ class LISASensitivity(Sensitivity):
             self.lisa = np.loadtxt("lisa_sensitivity_curve_nowd.dat")
         # Output Curve type is Root Spectral Density, per root Hz
         # f [Hz]    hf [Hz^(-1/2)]
-        self.lisaintp = scipy.interpolate.interp1d(self.lisa[:,0], self.lisa[:,1])
+        #self.lisaintp = scipy.interpolate.interp1d(self.lisa[:,0], self.lisa[:,1])
+        #Nominal 4 year LISA mission
+        self.length = 4 * 3.154e7
 
     def PSD(self):
         """Get the root power spectral density in Hz^[-1/2]"""
@@ -41,17 +65,56 @@ class LISASensitivity(Sensitivity):
 
 class LIGOSensitivity(Sensitivity):
     """LIGO sensitivity curve as a function of frequency"""
-    def __init__(self):
+    def __init__(self, dataset="A+"):
         super().__init__()
-        #Power spectral density from
-        #https://dcc.ligo.org/public/0149/T1800044/005/aLIGODesign.txt
-        #f(Hz)     hstrain(Hz^-1/2)
-        self.aligo = np.loadtxt("aLIGODesign.txt")
-        self.aligointp = scipy.interpolate.interp1d(self.aligo[:,0], self.aligo[:,1])
+        #Power spectral density strain noise amplitude
+        #f(Hz)     PSD (Hz^-1/2)
+        if dataset == "A+":
+            #https://dcc.ligo.org/LIGO-T1800042/public
+            self.aligo = np.loadtxt("LIGO_AplusDesign.txt")
+            #Say A+ is three years.
+            self.length = 3.
+        elif dataset == "design":
+            #https://dcc.ligo.org/public/0149/T1800044/005/aLIGODesign.txt
+            #Design is two years
+            self.length = 2.
+            self.aligo = np.loadtxt("aLIGODesign.txt")
+        elif dataset == "O1":
+            #LIGO O1 DCC
+            ligoO1ff = np.loadtxt("LIGO_O1_freqVector.txt")
+            ligoO1psd = np.loadtxt("LIGO_O1_psd.txt")
+            self.aligo = np.vstack([ligoO1ff, ligoO1psd]).T
+            #O1 is 4 months long
+            self.length = 4./12.
+        else:
+            raise ValueError("Dataset not supported")
+        #self.aligointp = scipy.interpolate.interp1d(self.aligo[:,0], self.aligo[:,1])
+        #Convert length to seconds
+        self.length *= 3.154e7
 
     def PSD(self):
         """Get the root power spectral density in Hz^[-1/2]"""
+        #The input data is in strain power spectral density noise amplitude.
+        #The (dimensionless) characteristic strain is
+        #charstrain = np.sqrt(self.aligo[:,0]) * self.aligo[:,1]
         return self.aligo[:,0], self.aligo[:,1]
+
+class LIGOO1Sensitivity(Sensitivity):
+    """LIGO sensitivity curve as a function of frequency"""
+    def __init__(self):
+        super().__init__()
+        #Power spectral density strain noise amplitude from
+        #https://dcc.ligo.org/public/0149/T1800044/005/aLIGODesign.txt
+        #f(Hz)     PSD (Hz^-1/2)
+        self.ligoO1ff = np.loadtxt("LIGO_O1_freqVector.txt")
+        self.ligoO1psd = np.loadtxt("LIGO_O1_psd.txt")
+
+    def PSD(self):
+        """Get the root power spectral density in Hz^[-1/2]"""
+        #The input data is in strain power spectral density noise amplitude.
+        #The (dimensionless) characteristic strain is
+        #charstrain = np.sqrt(self.aligo[:,0]) * self.aligo[:,1]
+        return self.ligoO1ff, self.ligoO1psd
 
 class SGWB:
     """Class to contain SGWBs.
@@ -64,9 +127,9 @@ class SGWB:
         self.freq = np.logspace(np.log10(minfreq), np.log10(maxfreq), nbins) * self.ureg('Hz')
         self.obstime = obstime * self.ureg('year')
         self.lisa = LISASensitivity()
-        self.lisafreq, self.lisapsd = self.lisa.omegasens()
+        self.lisafreq, self.lisapsd = self.lisa.omegadens()
         self.ligo = LIGOSensitivity()
-        self.ligofreq, self.ligopsd = self.ligo.omegasens()
+        self.ligofreq, self.ligopsd = self.ligo.omegadens()
         self.cstring = CosmicStringGWB()
         self.binarybh = BinaryBHGWB()
 
@@ -94,16 +157,18 @@ class SGWB:
         csgwb = self.cosmicstringmodel(freq, Gmu)
         #wdgwb = self.whitedwarfmodel(self.freq, wdnumber)
         bbhgb = self.bhbinarymerger(freq, bbhamp)
-        return csgwb + wdgwb + bbhgb
+        return csgwb + bbhgb
 
     def lnlikelihood(self, params):
         """Likelihood parameters:
         0 - cosmic string tension
         1 - BH binary merger rate amplitude
         """
-        model = self.omegamodel(params[0], params[1])
+        lisamodel = self.omegamodel(self.lisafreq, params[0], params[1])
+        ligomodel = self.omegamodel(self.ligofreq, params[0], params[1])
         #This is - the signal to noise ratio squared.
-        like = - 1 * self.obstime * np.trapz((model / (self.lisa + self.ligo))**2, x=self.freq)
+        like = - 1 * self.obstime * np.trapz((lisamodel / self.lisapsd)**2, x=self.freq)
+        like += - 1 * self.obstime * np.trapz((ligomodel / self.ligo)**2, x=self.freq)
         return like
 
 class BinaryBHGWB:
@@ -124,9 +189,9 @@ class BinaryBHGWB:
 
     def chi(self, z):
         """Comoving distance to z."""
-        Hub = 70 * self.ureg("km/s/Mpc")
+        Hub = 67.9 * self.ureg("km/s/Mpc")
         integ = lambda z_: 1./np.sqrt(0.3 * (1+z_)**3 + 0.7)
-        chi,err = scipy.integrate.quad(integ, 0, z)
+        chi,_ = scipy.integrate.quad(integ, 0, z)
         return (self.ureg("speed_of_light") / Hub  * chi).to_base_units()
 
     def dLumin(self, z):
@@ -135,7 +200,7 @@ class BinaryBHGWB:
 
     def rhocrit(self):
         """Critical energy density at z=0 in kg/m^3"""
-        rhoc = 3 * (70 * self.ureg('km/s/Mpc'))**2
+        rhoc = 3 * (67.9 * self.ureg('km/s/Mpc'))**2
         return rhoc / 8 / math.pi/ self.ureg.newtonian_constant_of_gravitation
 
     def Rsfrnormless(self, z):
@@ -150,8 +215,7 @@ class BinaryBHGWB:
     def dEdfsMergV2(self, m1, m2, femit):
         """Energy per unit strain in merger phase"""
         ms = 1.989e30 #* self.ureg("kg")
-        return 1./3.*(math.pi**2*self.GG**2)**(
- 1/3)*((m1*m2 * ms**2 )/(m1*ms + m2*ms)**(1/3))*femit**(2./3)/self.fmergerV2(m1, m2)
+        return 1./3.*(math.pi**2*self.GG**2)**(1/3)*((m1*m2 * ms**2 )/(m1*ms + m2*ms)**(1/3))*femit**(2./3)/self.fmergerV2(m1, m2)
 
     def dEdfsInsp(self, m1, m2, femit):
         """Energy per unit strain in inspiral phase"""
@@ -165,12 +229,13 @@ class BinaryBHGWB:
         return fqnr
 
     def dEdfstot(self, femit):
-        """Total energy per unit strain in all phases. This is computed with a weighted sum of the first three events."""
+        """Total energy per unit strain in all phases.
+           This is computed with a weighted sum of the first three events."""
         tot = 0
         weights = [3.4, 9.4,3.1]
-        minm = [29.1, 23, 14.2]
-        maxm = [36.2, 13, 7.5]
-        for i in range(3):
+        m1 = [29.1, 23, 14.2]
+        m2 = [36.2, 13, 7.5]
+        for i in range(np.size(weights)):
             fmerg = self.fmergerV2(minm[i], maxm[i])
             fqnr = self.fqnrV2(minm[i], maxm[i])
             wgt = 0
@@ -178,7 +243,7 @@ class BinaryBHGWB:
                 wgt = self.dEdfsMergV2(minm[i], maxm[i], femit)
             elif femit < fmerg:
                 wgt = self.dEdfsInsp(minm[i], maxm[i], femit)
-            tot += weights[i]/15.9 * wgt
+            tot += weights[i]/np.sum(weights) * wgt
         return tot #.to_base_units().magnitude
 
     def _omegagwz(self, zz, ff):
@@ -188,7 +253,7 @@ class BinaryBHGWB:
 
     def OmegaGW(self, freq, Norm=56.):
         """OmegaGW as a function of frequency."""
-        Hub = 70 * self.ureg("km/s/Mpc")
+        Hub = 67.9 * self.ureg("km/s/Mpc")
         omegagw_unnormed = [scipy.integrate.quad(self._omegagwz, 0.01, 10, args=(ff,))[0] for ff in freq]
         #See eq. 2 of 1609.03565
         freq = freq * self.ureg("Hz")
@@ -310,5 +375,6 @@ class CosmicStringGWB:
         #Check dimensionless
         #assert omint(0.5).check("[]")
         #omintmag = lambda aa: omint(aa).magnitude
-        OmegaGW, err = scipy.integrate.quad(omint, 1.1*self.amin, 0.9*self.amax)
+        #We split this integral into three pieces depending on the expansion time
+        OmegaGW,_ = scipy.integrate.quad(omint, 1.1*self.amin, 0.9*self.amax)
         return OmegaGW

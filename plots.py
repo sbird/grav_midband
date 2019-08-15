@@ -18,8 +18,8 @@ def make_sgwb_plot():
     freqs = np.logspace(-7, 4, 200)
 
     csgw = gravmidband.CosmicStringGWB()
-    omegacs = csgw.OmegaGW(freqs, 1.e-6)
-    plt.loglog(freqs, omegacs, "-", color="blue", label="CS: $G\mu = 10^{-6}$")
+    omegacs = csgw.OmegaGW(freqs, 1.e-11)
+    plt.loglog(freqs, omegacs, "-", color="blue", label="CS: $G\mu = 10^{-11}$")
 
     bbh = gravmidband.BinaryBHGWB()
     omegabbh = bbh.OmegaGW(freqs)
