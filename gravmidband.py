@@ -1,4 +1,6 @@
-"""Short code to compute likelihood functions for stochastic gravitational wave background detection using a mid-band experiment"""
+"""Short code to compute likelihood functions for stochastic gravitational wave background detection using a mid-band experiment.
+
+TODO: fix the CS plot. NS background."""
 import math
 import numpy as np
 import emcee
@@ -186,6 +188,8 @@ class BinaryBHGWB:
         #self.Ajithintp = scipy.interpolate.interp2d(self.Ajith_template[:,0], self.Ajith_template[:,1], self.Ajith_template[:,2], kind='linear')
         self.cc = (self.ureg("speed_of_light").to("m/s")).magnitude
         self.GG = ((1*self.ureg.newtonian_constant_of_gravitation).to_base_units()).magnitude
+        #Solar mass
+        self.ms = 1.989e30 #* self.ureg("kg"))
 
     def chi(self, z):
         """Comoving distance to z."""
@@ -207,54 +211,59 @@ class BinaryBHGWB:
         """Black hole merger rate as a function of the star formation rate. Unnormalized."""
         return self.a * np.exp(self.b * (z - self.zm)) / (self.a - self.b + self.b * np.exp(self.a*(z - self.zm)))
 
-    def fmergerV2(self, m1, m2):
+    def fmergerV2(self, msum):
         """Merger phase frequency"""
-        fmerg = 0.04*self.cc**3/(self.GG*(m1 + m2)* 1.989e30)
+        fmerg = 0.04*self.cc**3/(self.GG*msum* self.ms)
         return fmerg #.to("Hz")
 
     def dEdfsMergV2(self, m1, m2, femit):
         """Energy per unit strain in merger phase"""
-        ms = 1.989e30 #* self.ureg("kg")
-        return 1./3.*(math.pi**2*self.GG**2)**(1/3)*((m1*m2 * ms**2 )/(m1*ms + m2*ms)**(1/3))*femit**(2./3)/self.fmergerV2(m1, m2)
+        return 1./3.*(math.pi**2*self.GG**2)**(1/3)*((m1*m2)*self.ms**(5./3)/(m1 + m2)**(1/3))*femit**(2./3)/self.fmergerV2(m1 + m2)
 
     def dEdfsInsp(self, m1, m2, femit):
         """Energy per unit strain in inspiral phase"""
-        ms = 1.989e30 #* self.ureg("kg")
-        return 1./3.*(math.pi**2*self.GG**2/femit)**(1/3)*((m1*m2 * ms**2 )/(m1*ms + m2*ms)**(1/3))
+        return 1./3.*(math.pi**2*self.GG**2/femit)**(1/3)*self.ms**(5./3)*((m1*m2)/((m1 + m2))**(1/3))
 
-    def fqnrV2(self, m1, m2):
+    def fqnrV2(self, msum):
         """Ringdown phase frequency."""
-        ms = 1.989e30 #* self.ureg("kg"))
-        fqnr = 0.915*(self.cc**3*(1. - 0.63*(1. - 0.67)**(3/10.)))/(2*math.pi*self.GG*(m1 + m2)*ms)
+        fqnr = 0.915*(self.cc**3*(1. - 0.63*(1. - 0.67)**(3/10.)))/(2*math.pi*self.GG*msum*self.ms)
         return fqnr
 
-    def dEdfstot(self, femit):
+    def dEdfstot(self, femit, alpha=-2.3):
         """Total energy per unit strain in all phases.
-           This is computed with a weighted sum of the first three events."""
-        tot = 0
-        weights = [3.4, 9.4,3.1]
-        m1 = [29.1, 23, 14.2]
-        m2 = [36.2, 13, 7.5]
-        for i in range(np.size(weights)):
-            fmerg = self.fmergerV2(minm[i], maxm[i])
-            fqnr = self.fqnrV2(minm[i], maxm[i])
-            wgt = 0
-            if femit > fmerg and femit < fqnr:
-                wgt = self.dEdfsMergV2(minm[i], maxm[i], femit)
-            elif femit < fmerg:
-                wgt = self.dEdfsInsp(minm[i], maxm[i], femit)
-            tot += weights[i]/np.sum(weights) * wgt
-        return tot #.to_base_units().magnitude
+           This is computed with a weighted sum of a power law, following 1903.02886."""
+        nsamp = 30
+        m1 = np.linspace(5, 50, nsamp)
+        weights = m1**alpha
+        weight = np.trapz(y=weights, x=m1)*(50-5)
+        #Uniform distribution given first mass.
+        m2 = np.linspace(5, 50, nsamp)
+        m1rep = np.repeat(m1, nsamp)
+        m2rep = np.tile(m2, nsamp)
+        fmerg = self.fmergerV2(m1rep + m2rep)
+        fqnr = self.fqnrV2(m1rep + m2rep)
+        weights = np.repeat(weights, nsamp) / weight
+        ii = np.where(femit > fqnr)
+        weights[ii] = 0
+        ii = np.where((femit < fqnr)*(femit > fmerg))
+        weights[ii] *= self.dEdfsMergV2(m1rep[ii], m2rep[ii], femit)
+        ii = np.where(femit < fmerg)
+        weights[ii] *= self.dEdfsInsp(m1rep[ii], m2rep[ii], femit)
+        return np.trapz([np.trapz(weights[i:i+nsamp], m2) for i in range(nsamp)], m1)
 
-    def _omegagwz(self, zz, ff):
+    def _omegagwz(self, ff):
         """Integrand as a function of redshift, taking care of the redshifting factors."""
-        femit = ff * (1 + zz)
-        return self.Rsfrnormless(zz) * self.dEdfstot(femit) / ((1+zz) * hz(zz))
+        #From z= 0.01 to 10.
+        zz = np.logspace(-2, 2, 50)
+        Rsfr = self.Rsfrnormless(zz)
+        omz = np.array([self.dEdfstot(ff * (1 + z)) for z in zz])
+        omegagwz = np.trapz(Rsfr * omz / ((1+zz) * hz(zz)), zz)
+        return omegagwz
 
     def OmegaGW(self, freq, Norm=56.):
         """OmegaGW as a function of frequency."""
         Hub = 67.9 * self.ureg("km/s/Mpc")
-        omegagw_unnormed = [scipy.integrate.quad(self._omegagwz, 0.01, 10, args=(ff,))[0] for ff in freq]
+        omegagw_unnormed = np.array([self._omegagwz(ff) for ff in freq])
         #See eq. 2 of 1609.03565
         freq = freq * self.ureg("Hz")
         normfac = (Norm * self.Normunit / Hub * freq / self.ureg("speed_of_light")**2 / self.rhocrit())
