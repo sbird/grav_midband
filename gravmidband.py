@@ -326,9 +326,12 @@ class CosmicStringGWB:
         #From Yanou's table. TODO: reimplement.
         self.asd = np.loadtxt("a_evolution_in_Standard_cosmology.dat")
         #Input a t get an a out. Goes from a = 1e-30 to a = 1.
-        self.aRunS = scipy.interpolate.interp1d(np.log(self.asd[:,0]), self.asd[:,1], kind="quadratic") #, fill_value="extrapolate")
+        self.aRuntab = scipy.interpolate.interp1d(np.log(self.asd[:,0]), np.log(self.asd[:,1]), kind="quadratic") #, fill_value="extrapolate")
         self.tF = self.asd[0,0]
-        #Find the first time at which the string formation time is < tF
+
+    def aRunS(self, logt):
+        """Call the a interpolator"""
+        return np.exp(self.aRuntab(logt))
 
     def tdelta(self, T):
         """Time during the inflation era"""
@@ -351,10 +354,10 @@ class CosmicStringGWB:
         tt = np.exp(logt)
         aa = self.aRunS(logt)
         tik = self.tik(tt, Gmu, freq, kk, aa)
-        if tik < self.tF:
-            return 0
-        if tt < tik:
-            return 0
+        #if tik < self.tF:
+            #return 0
+        #if tt < tik:
+            #return 0
         om = self.Ceff(tik) / (tik**4 * self.rhoc) * aa**2 * self.aRunS(np.log(tik))**3 * (tt / self.GG)
         return om
 
@@ -366,16 +369,16 @@ class CosmicStringGWB:
         tstart2 = lambda logt: np.exp(logt) - self.tik(np.exp(logt), Gmu, freq, kk, self.aRunS(logt))
         if tstart2(np.log(ts)) < 0:
             sol = scipy.optimize.root_scalar(tstart2, x0=np.log(ts), x1=np.log(te))
-            print("old: ", ts, "new:", np.exp(sol.root))
+            #print("old: ", ts, "new:", np.exp(sol.root))
             ts = np.exp(sol.root)
         #Enforce that tik > self.tF so the interpolation table works
         tstart = lambda logt: self.tik(np.exp(logt), Gmu, freq, kk, self.aRunS(logt)) - self.tF
         if tstart(np.log(ts)) < 0:
             sol = scipy.optimize.root_scalar(tstart, x0=np.log(ts), x1=np.log(te))
-            print("tF old: ", ts, "new:", np.exp(sol.root))
+            #print("tF old: ", ts, "new:", np.exp(sol.root))
             ts = np.exp(sol.root)
 
-        omega = scipy.integrate.romberg(self.omegaintegrand, np.log(ts), np.log(te), args=(Gmu, freq, kk), divmax=20)
+        omega ,err = scipy.integrate.quad(self.omegaintegrand, np.log(ts), np.log(te), args=(Gmu, freq, kk), epsabs=1e-17, epsrel=1e-15)
         prefac = 2 * kk / freq * self.Fa * self.Gammak(kk) * Gmu**2 / (self.alpha * (self.alpha + self.Gamma * Gmu))
         return omega * prefac
 
@@ -398,9 +401,11 @@ def test_cs():
     """Simple test routine to check the cosmic string model matches the notebook"""
     cs = CosmicStringGWB()
     assert np.abs(cs.teq / 3.39688e36 - 1 ) < 1.e-4
-    assert np.abs(cs.tik(cs.teq, 1.e-11, 10, 1, cs.aRunS(np.log(cs.teq))) / 1.69834e28 - 1) < 1.e-4
+    assert np.abs(cs.tik(cs.teq, 1.e-11, 10 * cs.HzoverGev, 1, cs.aRunS(np.log(cs.teq))) / 1.69834e28 - 1) < 1.e-4
     assert np.abs(cs.Gammak(2)/ 5.51181 - 1 ) < 1.e-4
     assert np.abs(cs.tDelta0 / 4.22024e17 - 1) < 1.e-4
     assert np.abs(gcorr(1) / 75.9416 - 1) < 1.e-4
-    assert np.abs(cs.OmegaEpochk(1.e-11, 10, 1, cs.tDelta0, cs.teq) / 3.14244e-32 - 1) < 1.e-4
-    assert np.abs(cs.OmegaEpochk(1.e-11, 10, 1, cs.tF, cs.tDelta0) / 9.67858e-28 - 1) < 1.e-4
+    assert np.abs(cs.OmegaEpochk(1.e-11, 10, 1, cs.tF, cs.tDelta0) / 2.03699e-14 - 1) < 1.e-4
+    assert np.abs(cs.OmegaEpochk(1.e-11, 10, 1, cs.tDelta0, cs.teq) / 3.21958e-11 - 1) < 1.e-4
+    assert np.abs(cs.OmegaEpochk(1.e-11, 10, 1, cs.teq, cs.t0) / 1.55956e-17 - 1) < 1.e-4
+
