@@ -297,93 +297,110 @@ def gcorr(x):
 class CosmicStringGWB:
     """Model for the gravitational wave background from cosmic strings. From Yanou's Mathematica notebook and 1808.08968."""
     def __init__(self):
-        self.hub = (0.7 * 100 * ureg("km/s/Mpc").to_base_units()).magnitude
         self.ureg = ureg
-        self.HzoverGev = (1*self.ureg.planck_constant/2/math.pi).to('s*GeV')
-        self.CeffM = 0.5
-        self.CeffR = 5.7
-        self.alpha = 0.1
-        self.Fa = 0.1
+        self.HzoverGeV = 6.58e-25 #(1*self.ureg.planck_constant/2/math.pi).to('s*GeV')
+        #String loop formation parameters
         self.Gamma = 50.
+        #Large loop size as fraction of Hubble time.
+        self.alpha = 0.1
+        self.hub = 0.679 #* 100 * ureg("km/s/Mpc").to_base_units()).magnitude
+        #Large loop fraction
+        self.Fa = 0.1
+        #Energy loss to loop formation. These are approximate values from lattice simulations for
+        #different background cosmologies
+        self.CeffR = 5.7
+        self.CeffM = 0.5
+        #Newton's constant
+        self.GG = 1/1.2211e19**2 #GeV
+        #Critical density
+        self.rhoc = 1.05375e-5*(1.e-13/5)**3 * self.hub**2 #GeV^4
+        #Current time in hubble times.
+        self.t0 = 13.8*1.e9 * 365.25 * 24 * 60*60/self.HzoverGeV
         #self.t0 = (13.8e9 * self.ureg('years')).to('s') / HzoverGev
-        self.aaeq = 1/(1 + 3360)
-        self.amin = 1e-20
-        self.amax = 1e-5
-        self.aatab = np.logspace(np.log10(self.amin), np.log10(self.amax), 300)
-        #Must be first
-        self.gcorrtab = [self.gcorr(a) for a in self.aatab]
-        self.gcorrintp = scipy.interpolate.interp1d(np.log(self.aatab), np.log(self.gcorrtab))
-        self.tttab = [self.ttint(a) for a in self.aatab]
-        self.ttintp = scipy.interpolate.interp1d(np.log(self.aatab), self.tttab)
-        self.aaintp = scipy.interpolate.interp1d(self.tttab, np.log(self.aatab))
+        self.zeq = 3360
+        self.teq = self.t0 / (1+self.zeq)**(3./2)
+        self.tDelta0 = self.tdelta(1) #T_delta = 5 GeV
+        #self.aaeq = 1/(1 + 3360)
+        #self.amin = 1e-20
+        #self.amax = 1e-5
+        #From Yanou's table. TODO: reimplement.
+        self.asd = np.loadtxt("a_evolution_in_Standard_cosmology.dat")
+        #Input a t get an a out. Goes from a = 1e-30 to a = 1.
+        self.aRunS = scipy.interpolate.interp1d(np.log(self.asd[:,0]), self.asd[:,1], kind="quadratic") #, fill_value="extrapolate")
+        self.tF = self.asd[0,0]
+        #Find the first time at which the string formation time is < tF
 
-    def OmegaGW(self, freq, Gmu):
-        """SGWB power (omega_gw) for a string forming during radiation domination."""
-        P3R = [np.sum([self.OmegaGWMk(Gmu, ff, k) for k in range(1,30)]) for ff in freq]
-        assert np.size(P3R) == np.size(freq)
-        return P3R
+    def tdelta(self, T):
+        """Time during the inflation era"""
+        return 0.30118 /np.sqrt(gcorr(T) * self.GG) / T**2
 
-    def Ceff(self, aatik):
+    def Ceff(self, tik):
         """Effective string decay parameter"""
-        if aatik > self.aaeq:
-            return self.CeffM
-        return self.CeffR
-
-    def ttint(self, aa):
-        """Time in s between beginning and scale factor a."""
-        integ = lambda aa: 1/(aa * self.Hubble(aa)) #.to('s')).magnitude
-        return scipy.integrate.romberg(integ, self.amin,aa, divmax=100)
-
-    def time(self, aa):
-        """Get the time at scale factor a (pre-computed) in s"""
-        return self.ttintp(np.log(aa))
-
-    def tik(self, aa, Gmu, freq, k):
-        """Formation time of loops with mode number k in s."""
-        tt = self.time(aa)
-        return (self.Gamma * Gmu * tt + 2 * k / freq * aa) / (self.alpha + self.Gamma * Gmu)
-
-    def gcorr(self, a):
-        """Correction to radiation density before species freeze out"""
-        #This should be a root of a T / T0 = (g(T)/g(T0))**(1/3)
-        T0 = 2.72556666/(1.16045e13) #CMB temp in GeV
-        func = lambda T: a * T * (gcorr(T)/gcorr(T0))**(1./3) - T0
-        sol = scipy.optimize.root_scalar(func, x0=T0/a, x1=T0/a*100)
-        Ta = sol.root
-        return gcorr(Ta)/gcorr(T0)
-
-    def Hubble(self, a):
-        """Hubble expansion rate"""
-        return self.hub * np.sqrt(0.7 + 0.3/a**3 + np.exp(self.gcorrintp(np.log(a)))**(-1/3) * 8.5744e-5/a**4)
-
-    def OmegaGWMkintegrand(self, aa, Gmu, freq, k):
-        """Integrand from eq. 2.14"""
-        aat0 = 1
-        tik = self.tik(aa/aat0, Gmu, freq, k) # * self.ureg("s")
-        aatik = np.exp(self.aaintp(tik))
-        #We can neglect the heaviside function for tF because tF = 0.
-        #Units of s^-4
-        return self.Ceff(aatik) / tik**4 * (aa/aat0)**5 * (aatik/aa)**3 * (aa > aatik)
-
-    def rhocrit(self):
-        """Critical energy density at z=0 in kg/m^3 * G"""
-        rhoc = 3 * (self.hub)**2 #* self.ureg("1/s"))**2
-        return rhoc / 8 / math.pi #/ self.ureg.newtonian_constant_of_gravitation
+        return self.CeffM * (tik > self.teq) + self.CeffR * (tik <= self.teq)
 
     def Gammak(self, k):
         """Mode-dependent Gamma"""
         return self.Gamma * k**(-4./3) / 3.6
 
+    def tik(self, tt, Gmu, freq, k, aa):
+        """Formation time of loops with mode number k in s."""
+        return (self.Gamma * Gmu * tt + 2 * k / freq * aa) / (self.alpha + self.Gamma * Gmu)
+
+    def omegaintegrand(self, logt, Gmu, freq, kk):
+        """Integrand for the Omega contribution from cosmic strings"""
+        tt = np.exp(logt)
+        aa = self.aRunS(logt)
+        tik = self.tik(tt, Gmu, freq, kk, aa)
+        if tik < self.tF:
+            return 0
+        if tt < tik:
+            return 0
+        om = self.Ceff(tik) / (tik**4 * self.rhoc) * aa**2 * self.aRunS(np.log(tik))**3 * (tt / self.GG)
+        return om
+
+    def OmegaEpochk(self, Gmu, freq, kk, ts, te):
+        """The total omega of cosmic strings from a given epoch"""
+        #Frequency is in GeV units!
+        freq *= self.HzoverGeV
+        #Enforce that tt > tik so the strings exist
+        tstart2 = lambda logt: np.exp(logt) - self.tik(np.exp(logt), Gmu, freq, kk, self.aRunS(logt))
+        if tstart2(np.log(ts)) < 0:
+            sol = scipy.optimize.root_scalar(tstart2, x0=np.log(ts), x1=np.log(te))
+            print("old: ", ts, "new:", np.exp(sol.root))
+            ts = np.exp(sol.root)
+        #Enforce that tik > self.tF so the interpolation table works
+        tstart = lambda logt: self.tik(np.exp(logt), Gmu, freq, kk, self.aRunS(logt)) - self.tF
+        if tstart(np.log(ts)) < 0:
+            sol = scipy.optimize.root_scalar(tstart, x0=np.log(ts), x1=np.log(te))
+            print("tF old: ", ts, "new:", np.exp(sol.root))
+            ts = np.exp(sol.root)
+
+        omega = scipy.integrate.romberg(self.omegaintegrand, np.log(ts), np.log(te), args=(Gmu, freq, kk), divmax=20)
+        prefac = 2 * kk / freq * self.Fa * self.Gammak(kk) * Gmu**2 / (self.alpha * (self.alpha + self.Gamma * Gmu))
+        return omega * prefac
+
     def OmegaGWMk(self, Gmu, freq, k):
         """Eq. 2.14 of 1808.08968"""
-        #GG = self.ureg.newtonian_constant_of_gravitation
-        #Units of s^3
-        prefac = (2 * k / freq / self.rhocrit()) * self.Fa * self.Gammak(k) * Gmu**2 / (self.alpha * (self.alpha + self.Gamma * Gmu))
-        #Multiply by a jacobian factor dt/da = 1/da/dt = 1/(aH) so we can integrate da
-        omint = lambda aa: (prefac * self.OmegaGWMkintegrand(aa, Gmu, freq, k) / (aa * self.Hubble(aa)))
         #Check dimensionless
-        #assert omint(0.5).check("[]")
-        #omintmag = lambda aa: omint(aa).magnitude
         #We split this integral into three pieces depending on the expansion time
-        OmegaGW,_ = scipy.integrate.quad(omint, 1.1*self.amin, 0.9*self.amax)
-        return OmegaGW
+        Omegak = self.OmegaEpochk(Gmu, freq, k, self.tF, self.tDelta0)
+        Omegak += self.OmegaEpochk(Gmu, freq, k, self.tDelta0, self.teq)
+        Omegak += self.OmegaEpochk(Gmu, freq, k, self.teq, self.t0)
+        return Omegak
+
+    def OmegaGW(self, freq, Gmu):
+        """SGWB power (omega_gw) for a string forming during radiation domination."""
+        P4R = [np.sum([self.OmegaGWMk(Gmu, ff, k) for k in range(1,30)]) for ff in freq]
+        assert np.size(P4R) == np.size(freq)
+        return P4R
+
+def test_cs():
+    """Simple test routine to check the cosmic string model matches the notebook"""
+    cs = CosmicStringGWB()
+    assert np.abs(cs.teq / 3.39688e36 - 1 ) < 1.e-4
+    assert np.abs(cs.tik(cs.teq, 1.e-11, 10, 1, cs.aRunS(np.log(cs.teq))) / 1.69834e28 - 1) < 1.e-4
+    assert np.abs(cs.Gammak(2)/ 5.51181 - 1 ) < 1.e-4
+    assert np.abs(cs.tDelta0 / 4.22024e17 - 1) < 1.e-4
+    assert np.abs(gcorr(1) / 75.9416 - 1) < 1.e-4
+    assert np.abs(cs.OmegaEpochk(1.e-11, 10, 1, cs.tDelta0, cs.teq) / 3.14244e-32 - 1) < 1.e-4
+    assert np.abs(cs.OmegaEpochk(1.e-11, 10, 1, cs.tF, cs.tDelta0) / 9.67858e-28 - 1) < 1.e-4
