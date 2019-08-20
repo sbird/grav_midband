@@ -124,16 +124,25 @@ class SGWB:
     maxfreq - maximum LIGO frequency, 400 Hz
     minfreq - minimum LISA frequency, 10^-5 Hz
     """
-    def __init__(self, obstime=3, maxfreq = 400, minfreq = 1e-5, nbins=1000):
+    def __init__(self, nsamples=100, strings=True, binaries=True):
         self.ureg = ureg
-        self.freq = np.logspace(np.log10(minfreq), np.log10(maxfreq), nbins) * self.ureg('Hz')
-        self.obstime = obstime * self.ureg('year')
         self.lisa = LISASensitivity()
-        self.lisafreq, self.lisapsd = self.lisa.omegadens()
+        lsf, lspsd = self.lisa.omegadens()
+        self.lisafreq, self.lisapsd = self.downsample(nsamples, lsf, lspsd)
+
         self.ligo = LIGOSensitivity()
-        self.ligofreq, self.ligopsd = self.ligo.omegadens()
+        lgf, lgpsd = self.ligo.omegadens()
+        self.ligofreq, self.ligopsd = self.downsample(nsamples, lgf, lgpsd)
         self.cstring = CosmicStringGWB()
         self.binarybh = BinaryBHGWB()
+        self.strings = strings
+        self.binaries = binaries
+
+    def downsample(self, nsamples, freq, psd):
+        """Downsample a sensitivity curve to a lower desired number of bins."""
+        intp = scipy.interpolate.interp1d(np.log(freq), np.log(psd))
+        jump = int(np.size(freq)/nsamples)
+        return freq[::jump], np.exp(intp(np.log(freq[::jump])))
 
     def cosmicstringmodel(self, freq, Gmu):
         """The cosmic string SGWB model."""
@@ -156,21 +165,28 @@ class SGWB:
     def omegamodel(self, freq, Gmu, bbhamp):
         """Construct a model with two free parameters,
            combining multiple SGWB sources."""
-        csgwb = self.cosmicstringmodel(freq, Gmu)
+        csgwb = 0
+        bbhgb = 0
+        if self.strings:
+            csgwb = self.cosmicstringmodel(freq, Gmu)
         #wdgwb = self.whitedwarfmodel(self.freq, wdnumber)
-        bbhgb = self.bhbinarymerger(freq, bbhamp)
+        if self.binaries:
+            bbhgb = self.bhbinarymerger(freq, bbhamp)
         return csgwb + bbhgb
 
-    def lnlikelihood(self, params):
+    def lnlikelihood(self, params, lisa=True, ligo=True):
         """Likelihood parameters:
         0 - cosmic string tension
         1 - BH binary merger rate amplitude
         """
-        lisamodel = self.omegamodel(self.lisafreq, params[0], params[1])
-        ligomodel = self.omegamodel(self.ligofreq, params[0], params[1])
-        #This is - the signal to noise ratio squared.
-        like = - 1 * self.obstime * np.trapz((lisamodel / self.lisapsd)**2, x=self.freq)
-        like += - 1 * self.obstime * np.trapz((ligomodel / self.ligo)**2, x=self.freq)
+        like = 0
+        if lisa:
+            lisamodel = self.omegamodel(self.lisafreq, params[0], params[1])
+            like += - 1 * np.trapz((lisamodel / self.lisapsd)**2, x=self.lisafreq)
+        if ligo:
+            ligomodel = self.omegamodel(self.ligofreq, params[0], params[1])
+            #This is - the signal to noise ratio squared.
+            like += - 1 * np.trapz((ligomodel / self.ligopsd)**2, x=self.ligofreq)
         return like
 
 class BinaryBHGWB:
@@ -326,7 +342,7 @@ class CosmicStringGWB:
         #From Yanou's table. TODO: reimplement.
         self.asd = np.loadtxt("a_evolution_in_Standard_cosmology.dat")
         #Input a t get an a out. Goes from a = 1e-30 to a = 1.
-        self.aRuntab = scipy.interpolate.interp1d(np.log(self.asd[:,0]), np.log(self.asd[:,1]), kind="quadratic") #, fill_value="extrapolate")
+        self.aRuntab = scipy.interpolate.interp1d(np.log(self.asd[:,0]), np.log(self.asd[:,1]), kind="quadratic", fill_value="extrapolate")
         self.tF = self.asd[0,0]
 
     def aRunS(self, logt):
@@ -393,7 +409,7 @@ class CosmicStringGWB:
 
     def OmegaGW(self, freq, Gmu):
         """SGWB power (omega_gw) for a string forming during radiation domination."""
-        P4R = [np.sum([self.OmegaGWMk(Gmu, ff, k) for k in range(1,30)]) for ff in freq]
+        P4R = np.array([np.sum([self.OmegaGWMk(Gmu, ff, k) for k in range(1,31)]) for ff in freq])
         assert np.size(P4R) == np.size(freq)
         return P4R
 
@@ -401,11 +417,11 @@ def test_cs():
     """Simple test routine to check the cosmic string model matches the notebook"""
     cs = CosmicStringGWB()
     assert np.abs(cs.teq / 3.39688e36 - 1 ) < 1.e-4
-    assert np.abs(cs.tik(cs.teq, 1.e-11, 10 * cs.HzoverGev, 1, cs.aRunS(np.log(cs.teq))) / 1.69834e28 - 1) < 1.e-4
+    assert np.abs(cs.tik(cs.teq, 1.e-11, 10 * cs.HzoverGeV, 1, cs.aRunS(np.log(cs.teq))) / 1.69834e28 - 1) < 1.e-4
     assert np.abs(cs.Gammak(2)/ 5.51181 - 1 ) < 1.e-4
     assert np.abs(cs.tDelta0 / 4.22024e17 - 1) < 1.e-4
     assert np.abs(gcorr(1) / 75.9416 - 1) < 1.e-4
-    assert np.abs(cs.OmegaEpochk(1.e-11, 10, 1, cs.tF, cs.tDelta0) / 2.03699e-14 - 1) < 1.e-4
-    assert np.abs(cs.OmegaEpochk(1.e-11, 10, 1, cs.tDelta0, cs.teq) / 3.21958e-11 - 1) < 1.e-4
-    assert np.abs(cs.OmegaEpochk(1.e-11, 10, 1, cs.teq, cs.t0) / 1.55956e-17 - 1) < 1.e-4
+    assert np.abs(cs.OmegaEpochk(1.e-11, 10, 1, cs.tF, cs.tDelta0) / 2.03699e-14 - 1) < 2.e-3
+    assert np.abs(cs.OmegaEpochk(1.e-11, 10, 1, cs.tDelta0, cs.teq) / 3.21958e-11 - 1) < 2.e-2
+    assert np.abs(cs.OmegaEpochk(1.e-11, 10, 1, cs.teq, cs.t0) / 1.55956e-17 - 1) < 2.e-3
 
