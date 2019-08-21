@@ -10,9 +10,9 @@ import scipy.integrate
 
 ureg = pint.UnitRegistry()
 
-def hz(zz):
-    """Dimensionless part of the hubble rate"""
-    return np.sqrt(0.3 * (1+zz)**3 + 0.7)
+def hz(zzp1):
+    """Dimensionless part of the hubble rate. Argument is 1+z"""
+    return np.sqrt(0.3 * zzp1**3 + 0.7)
 
 class Sensitivity:
     """Base class for instrument sensitivities.
@@ -124,7 +124,7 @@ class SGWB:
     maxfreq - maximum LIGO frequency, 400 Hz
     minfreq - minimum LISA frequency, 10^-5 Hz
     """
-    def __init__(self, nsamples=500, strings=True, binaries=True):
+    def __init__(self, nsamples=400, strings=True, binaries=True):
         self.ureg = ureg
         self.lisa = LISASensitivity()
         self.lisafreq, self.lisapsd = self.lisa.omegadens()
@@ -223,9 +223,9 @@ class BinaryBHGWB:
         rhoc = 3 * (67.9 * self.ureg('km/s/Mpc'))**2
         return rhoc / 8 / math.pi/ self.ureg.newtonian_constant_of_gravitation
 
-    def Rsfrnormless(self, z):
+    def Rsfrnormless(self, zzp1):
         """Black hole merger rate as a function of the star formation rate. Unnormalized."""
-        return self.a * np.exp(self.b * (z - self.zm)) / (self.a - self.b + self.b * np.exp(self.a*(z - self.zm)))
+        return self.a * np.exp(self.b * (zzp1 - 1 - self.zm)) / (self.a - self.b + self.b * np.exp(self.a*(zzp1 - 1 - self.zm)))
 
     def fmergerV2(self, msum):
         """Merger phase frequency"""
@@ -248,7 +248,7 @@ class BinaryBHGWB:
     def dEdfstot(self, femit, alpha=-2.3):
         """Total energy per unit strain in all phases.
            This is computed with a weighted sum of a power law, following 1903.02886."""
-        nsamp = 30
+        nsamp = 100
         m1 = np.linspace(5, 50, nsamp)
         weights = m1**alpha
         weight = np.trapz(y=weights, x=m1)*(50-5)
@@ -267,19 +267,25 @@ class BinaryBHGWB:
         weights[ii] *= self.dEdfsInsp(m1rep[ii], m2rep[ii], femit)
         return np.trapz([np.trapz(weights[i:i+nsamp], m2) for i in range(nsamp)], m1)
 
-    def _omegagwz(self, ff):
+    def _omegagwz(self, ff, dEdfstot):
         """Integrand as a function of redshift, taking care of the redshifting factors."""
         #From z= 0.01 to 10.
-        zz = np.logspace(-2, 2, 50)
-        Rsfr = self.Rsfrnormless(zz)
-        omz = np.array([self.dEdfstot(ff * (1 + z)) for z in zz])
-        omegagwz = np.trapz(Rsfr * omz / ((1+zz) * hz(zz)), zz)
+        lff = np.log(ff)
+        Rsfr = lambda zzp1 : self.Rsfrnormless(zzp1) / hz(zzp1)
+        omz = lambda lzp1 : Rsfr(np.exp(lzp1)) * np.exp(dEdfstot(lff + lzp1))
+        omegagwz, err = scipy.integrate.quad(omz, np.log(1), np.log(20))
         return omegagwz
 
-    def OmegaGW(self, freq, Norm=56.):
-        """OmegaGW as a function of frequency."""
+    def OmegaGW(self, freq, Norm=56., alpha=-2.3):
+        """OmegaGW as a function of frequency. Normalization is in units of mergers per Gpc^3 per year"""
         Hub = 67.9 * self.ureg("km/s/Mpc")
-        omegagw_unnormed = np.array([self._omegagwz(ff) for ff in freq])
+        lnewlf = np.log10(freq[0]/1.01)
+        lnewhf = np.log10(freq[-1]*110)
+        nsamp = (lnewhf - lnewlf) * 6
+        fextended = np.logspace(lnewlf, lnewhf, nsamp)
+        dEdfstot = np.array([self.dEdfstot(ff, alpha=alpha) for ff in fextended])
+        dEdfstot_intp = scipy.interpolate.interp1d(np.log(fextended), np.log(dEdfstot+1e-99), kind='linear')
+        omegagw_unnormed = np.array([self._omegagwz(ff, dEdfstot_intp) for ff in freq])
         #See eq. 2 of 1609.03565
         freq = freq * self.ureg("Hz")
         normfac = (Norm * self.Normunit / Hub * freq / self.ureg("speed_of_light")**2 / self.rhocrit())
