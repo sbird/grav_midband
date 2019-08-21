@@ -124,15 +124,15 @@ class SGWB:
     maxfreq - maximum LIGO frequency, 400 Hz
     minfreq - minimum LISA frequency, 10^-5 Hz
     """
-    def __init__(self, nsamples=100, strings=True, binaries=True):
+    def __init__(self, nsamples=500, strings=True, binaries=True):
         self.ureg = ureg
         self.lisa = LISASensitivity()
-        lsf, lspsd = self.lisa.omegadens()
-        self.lisafreq, self.lisapsd = self.downsample(nsamples, lsf, lspsd)
+        self.lisafreq, self.lisapsd = self.lisa.omegadens()
+        self.lisafreq, self.lisapsd = self.downsample(nsamples, self.lisafreq, self.lisapsd)
 
         self.ligo = LIGOSensitivity()
-        lgf, lgpsd = self.ligo.omegadens()
-        self.ligofreq, self.ligopsd = self.downsample(nsamples, lgf, lgpsd)
+        self.ligofreq, self.ligopsd = self.ligo.omegadens()
+        self.ligofreq, self.ligopsd = self.downsample(nsamples, self.ligofreq, self.ligopsd)
         self.cstring = CosmicStringGWB()
         self.binarybh = BinaryBHGWB()
         self.strings = strings
@@ -361,15 +361,17 @@ class CosmicStringGWB:
         """Mode-dependent Gamma"""
         return self.Gamma * k**(-4./3) / 3.6
 
-    def tik(self, tt, Gmu, freq, k, aa):
-        """Formation time of loops with mode number k in s."""
-        return (self.Gamma * Gmu * tt + 2 * k / freq * aa) / (self.alpha + self.Gamma * Gmu)
+    def tik(self, tt, Gmu, freqk, aa):
+        """Formation time of loops with mode number k in s.
+        Takes as argument freqk, which is freq / k"""
+        return (self.Gamma * Gmu * tt + 2 / freqk * aa) / (self.alpha + self.Gamma * Gmu)
 
-    def omegaintegrand(self, logt, Gmu, freq, kk):
-        """Integrand for the Omega contribution from cosmic strings"""
+    def omegaintegrand(self, logt, Gmu, freqk):
+        """Integrand for the Omega contribution from cosmic strings.
+        Takes freqk = freq/k"""
         tt = np.exp(logt)
         aa = self.aRunS(logt)
-        tik = self.tik(tt, Gmu, freq, kk, aa)
+        tik = self.tik(tt, Gmu, freqk, aa)
         #if tik < self.tF:
             #return 0
         #if tt < tik:
@@ -382,34 +384,38 @@ class CosmicStringGWB:
         #Frequency is in GeV units!
         freq *= self.HzoverGeV
         #Enforce that tt > tik so the strings exist
-        tstart2 = lambda logt: np.exp(logt) - self.tik(np.exp(logt), Gmu, freq, kk, self.aRunS(logt))
+        tstart2 = lambda logt: np.exp(logt) - self.tik(np.exp(logt), Gmu, freq/kk, self.aRunS(logt))
         if tstart2(np.log(ts)) < 0:
             sol = scipy.optimize.root_scalar(tstart2, x0=np.log(ts), x1=np.log(te))
             #print("old: ", ts, "new:", np.exp(sol.root))
             ts = np.exp(sol.root)
         #Enforce that tik > self.tF so the interpolation table works
-        tstart = lambda logt: self.tik(np.exp(logt), Gmu, freq, kk, self.aRunS(logt)) - self.tF
+        tstart = lambda logt: self.tik(np.exp(logt), Gmu, freq / kk, self.aRunS(logt)) - self.tF
         if tstart(np.log(ts)) < 0:
             sol = scipy.optimize.root_scalar(tstart, x0=np.log(ts), x1=np.log(te))
             #print("tF old: ", ts, "new:", np.exp(sol.root))
             ts = np.exp(sol.root)
 
-        omega ,err = scipy.integrate.quad(self.omegaintegrand, np.log(ts), np.log(te), args=(Gmu, freq, kk), epsabs=1e-17, epsrel=1e-15)
+        omega ,err = scipy.integrate.quad(self.omegaintegrand, np.log(ts), np.log(te), args=(Gmu, freq/kk), epsabs=1e-17, epsrel=1e-15)
         prefac = 2 * kk / freq * self.Fa * self.Gammak(kk) * Gmu**2 / (self.alpha * (self.alpha + self.Gamma * Gmu))
         return omega * prefac
 
     def OmegaGWMk(self, Gmu, freq, k):
         """Eq. 2.14 of 1808.08968"""
-        #Check dimensionless
-        #We split this integral into three pieces depending on the expansion time
-        Omegak = self.OmegaEpochk(Gmu, freq, k, self.tF, self.tDelta0)
-        Omegak += self.OmegaEpochk(Gmu, freq, k, self.tDelta0, self.teq)
-        Omegak += self.OmegaEpochk(Gmu, freq, k, self.teq, self.t0)
-        return Omegak
+        #Yanou splits this integral into three pieces depending on the expansion time, but we don't need to.
+        return self.OmegaEpochk(Gmu, freq, k, self.tF, self.t0)
 
     def OmegaGW(self, freq, Gmu):
         """SGWB power (omega_gw) for a string forming during radiation domination."""
-        P4R = np.array([np.sum([self.OmegaGWMk(Gmu, ff, k) for k in range(1,31)]) for ff in freq])
+        #Add extra bins to extend the table to high k, low frequency
+        lnewlf = np.log10(freq[0]/31)
+        lnewhf = np.log10(freq[-1]*1.02)
+        nsamp = (lnewhf - lnewlf) * 6
+        fextended = np.logspace(lnewlf, lnewhf, nsamp)
+        omegagmk1 = np.array([self.OmegaGWMk(Gmu, ff, 1) for ff in fextended])
+        omintp = scipy.interpolate.interp1d(np.log(fextended), np.log(omegagmk1))
+        P4R = np.array([np.sum([self.Gammak(k) * np.exp(omintp(np.log(ff/k))) for k in range(1,31)]) for ff in freq])/self.Gammak(1)
+        #P4R = np.array([np.sum([self.OmegaGWMk(Gmu, ff, k) for k in range(1,30)]) for ff in freq])
         assert np.size(P4R) == np.size(freq)
         return P4R
 
@@ -417,11 +423,12 @@ def test_cs():
     """Simple test routine to check the cosmic string model matches the notebook"""
     cs = CosmicStringGWB()
     assert np.abs(cs.teq / 3.39688e36 - 1 ) < 1.e-4
-    assert np.abs(cs.tik(cs.teq, 1.e-11, 10 * cs.HzoverGeV, 1, cs.aRunS(np.log(cs.teq))) / 1.69834e28 - 1) < 1.e-4
+    assert np.abs(cs.tik(cs.teq, 1.e-11, 10 * cs.HzoverGeV/1., cs.aRunS(np.log(cs.teq))) / 1.69834e28 - 1) < 1.e-4
     assert np.abs(cs.Gammak(2)/ 5.51181 - 1 ) < 1.e-4
     assert np.abs(cs.tDelta0 / 4.22024e17 - 1) < 1.e-4
     assert np.abs(gcorr(1) / 75.9416 - 1) < 1.e-4
     assert np.abs(cs.OmegaEpochk(1.e-11, 10, 1, cs.tF, cs.tDelta0) / 2.03699e-14 - 1) < 2.e-3
     assert np.abs(cs.OmegaEpochk(1.e-11, 10, 1, cs.tDelta0, cs.teq) / 3.21958e-11 - 1) < 2.e-2
     assert np.abs(cs.OmegaEpochk(1.e-11, 10, 1, cs.teq, cs.t0) / 1.55956e-17 - 1) < 2.e-3
-
+    tot = cs.OmegaGW([1e-6,20], 1e-11)
+    assert np.all(np.abs(tot - np.array([1.05797682e-09, 1.69091713e-10])) < 2.e-3)
