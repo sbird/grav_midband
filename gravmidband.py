@@ -10,6 +10,19 @@ import scipy.integrate
 
 ureg = pint.UnitRegistry()
 
+def gelman_rubin(chain):
+    """Compute the Gelman-Rubin statistic for a chain"""
+    ssq = np.var(chain, axis=1, ddof=1)
+    W = np.mean(ssq, axis=0)
+    tb = np.mean(chain, axis=1)
+    tbb = np.mean(tb, axis=0)
+    m = chain.shape[0]
+    n = chain.shape[1]
+    B = n / (m - 1) * np.sum((tbb - tb)**2, axis=0)
+    var_t = (n - 1) / n * W + 1 / n * B
+    R = np.sqrt(var_t / W)
+    return R
+
 def hz(zzp1):
     """Dimensionless part of the hubble rate. Argument is 1+z"""
     return np.sqrt(0.3 * zzp1**3 + 0.7)
@@ -137,6 +150,9 @@ class SGWB:
         self.binarybh = BinaryBHGWB()
         self.strings = strings
         self.binaries = binaries
+        #This is the "true" model we are trying to detect: no cosmic strings, LIGO current best fit merger rate.
+        self.lisamockdata = self.omegamodel(self.lisafreq, 0, 56.)
+        self.ligomockdata = self.omegamodel(self.ligofreq, 0, 56.)
 
     def downsample(self, nsamples, freq, psd):
         """Downsample a sensitivity curve to a lower desired number of bins."""
@@ -146,6 +162,8 @@ class SGWB:
 
     def cosmicstringmodel(self, freq, Gmu):
         """The cosmic string SGWB model."""
+        if Gmu == 0:
+            return 0
         return self.cstring.OmegaGW(freq, Gmu)
 
     def whitedwarfmodel(self, freq, number):
@@ -179,15 +197,48 @@ class SGWB:
         0 - cosmic string tension
         1 - BH binary merger rate amplitude
         """
+        if params[1] < 0:
+            return -np.inf
+        if params[0] > -14:
+            return -np.inf
         like = 0
         if lisa:
-            lisamodel = self.omegamodel(self.lisafreq, params[0], params[1])
-            like += - 1 * np.trapz((lisamodel / self.lisapsd)**2, x=self.lisafreq)
+            lisamodel = self.omegamodel(self.lisafreq, np.exp(params[0]), params[1])
+            like += - 1 * np.trapz(((lisamodel - self.lisamockdata)/ self.lisapsd)**2, x=self.lisafreq)
         if ligo:
-            ligomodel = self.omegamodel(self.ligofreq, params[0], params[1])
+            ligomodel = self.omegamodel(self.ligofreq, np.exp(params[0]), params[1])
             #This is - the signal to noise ratio squared.
-            like += - 1 * np.trapz((ligomodel / self.ligopsd)**2, x=self.ligofreq)
+            like += - 1 * np.trapz(((ligomodel - self.ligomockdata)/ self.ligopsd)**2, x=self.ligofreq)
+        #ligo/lisa prior?
         return like
+
+    def do_sampling(self, savefile, nwalkers=10, burnin=3000, nsamples = 3000, while_loop=True, maxsample=20):
+        """Do the sampling with emcee"""
+        #Limits
+        #Say Gmu ranges from exp(-45) - exp(-14) and merger rate between 0 and 100.
+        pr = np.array([30, 100])
+        #Priors are assumed to be in the middle.
+        cent = np.array([-30, 55])
+        p0 = [cent+2*pr/16.*np.random.rand(2)-pr/16. for _ in range(nwalkers)]
+        assert np.all([np.isfinite(self.lnlikelihood(pp)) for pp in p0])
+        emcee_sampler = emcee.EnsembleSampler(nwalkers, 2, self.lnlikelihood)
+        pos, _, _ = emcee_sampler.run_mcmc(p0, burnin)
+        #Check things are reasonable
+        assert np.all(emcee_sampler.acceptance_fraction > 0.01)
+        emcee_sampler.reset()
+        self.cur_results = emcee_sampler
+        gr = 10.
+        count = 0
+        while np.any(gr > 1.01) and count < maxsample:
+            emcee_sampler.run_mcmc(pos, nsamples)
+            gr = gelman_rubin(emcee_sampler.chain)
+            print("Total samples:",nsamples," Gelman-Rubin: ",gr)
+            np.savetxt(savefile, emcee_sampler.flatchain)
+            count += 1
+            if while_loop is False:
+                break
+        self.flatchain = emcee_sampler.flatchain
+        return emcee_sampler
 
 class BinaryBHGWB:
     """Model for the binary black hole background, fiducial version from LIGO."""
@@ -267,13 +318,18 @@ class BinaryBHGWB:
         weights[ii] *= self.dEdfsInsp(m1rep[ii], m2rep[ii], femit)
         return np.trapz([np.trapz(weights[i:i+nsamp], m2) for i in range(nsamp)], m1)
 
-    def _omegagwz(self, ff, dEdfstot):
+    def _omegagwz(self, ff, dEdfstot, fmax):
         """Integrand as a function of redshift, taking care of the redshifting factors."""
         #From z= 0.01 to 10.
         lff = np.log(ff)
+        zmax = 20
+        if fmax < ff:
+            return 0
+        if fmax < ff * zmax:
+            zmax = fmax / ff * 0.98
         Rsfr = lambda zzp1 : self.Rsfrnormless(zzp1) / hz(zzp1)
         omz = lambda lzp1 : Rsfr(np.exp(lzp1)) * np.exp(dEdfstot(lff + lzp1))
-        omegagwz, err = scipy.integrate.quad(omz, np.log(1), np.log(20))
+        omegagwz, err = scipy.integrate.quad(omz, np.log(1), np.log(zmax))
         return omegagwz
 
     def OmegaGW(self, freq, Norm=56., alpha=-2.3):
@@ -284,8 +340,13 @@ class BinaryBHGWB:
         nsamp = (lnewhf - lnewlf) * 6
         fextended = np.logspace(lnewlf, lnewhf, nsamp)
         dEdfstot = np.array([self.dEdfstot(ff, alpha=alpha) for ff in fextended])
-        dEdfstot_intp = scipy.interpolate.interp1d(np.log(fextended), np.log(dEdfstot+1e-99), kind='linear')
-        omegagw_unnormed = np.array([self._omegagwz(ff, dEdfstot_intp) for ff in freq])
+        ii = np.where(dEdfstot == 0)
+        if np.size(ii) > 0:
+            fmax = fextended[ii][0]
+        else:
+            fmax = fextended[-1] * 10000
+        dEdfstot_intp = scipy.interpolate.interp1d(np.log(fextended), np.log(dEdfstot+1e-99), kind='quadratic')
+        omegagw_unnormed = np.array([self._omegagwz(ff, dEdfstot_intp, fmax) for ff in freq])
         #See eq. 2 of 1609.03565
         freq = freq * self.ureg("Hz")
         normfac = (Norm * self.Normunit / Hub * freq / self.ureg("speed_of_light")**2 / self.rhocrit())
@@ -402,7 +463,7 @@ class CosmicStringGWB:
             #print("tF old: ", ts, "new:", np.exp(sol.root))
             ts = np.exp(sol.root)
 
-        omega ,err = scipy.integrate.quad(self.omegaintegrand, np.log(ts), np.log(te), args=(Gmu, freq/kk), epsabs=1e-17, epsrel=1e-15)
+        omega ,err = scipy.integrate.quad(self.omegaintegrand, np.log(ts), np.log(te), args=(Gmu, freq/kk), epsabs=1e-10, epsrel=1e-6)
         prefac = 2 * kk / freq * self.Fa * self.Gammak(kk) * Gmu**2 / (self.alpha * (self.alpha + self.Gamma * Gmu))
         return omega * prefac
 
@@ -410,6 +471,7 @@ class CosmicStringGWB:
         """Eq. 2.14 of 1808.08968"""
         #Yanou splits this integral into three pieces depending on the expansion time, but we don't need to.
         return self.OmegaEpochk(Gmu, freq, k, self.tF, self.t0)
+
 
     def OmegaGW(self, freq, Gmu):
         """SGWB power (omega_gw) for a string forming during radiation domination."""
