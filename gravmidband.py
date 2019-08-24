@@ -472,7 +472,6 @@ class CosmicStringGWB:
         #Yanou splits this integral into three pieces depending on the expansion time, but we don't need to.
         return self.OmegaEpochk(Gmu, freq, k, self.tF, self.t0)
 
-
     def OmegaGW(self, freq, Gmu):
         """SGWB power (omega_gw) for a string forming during radiation domination."""
         #Add extra bins to extend the table to high k, low frequency
