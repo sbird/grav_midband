@@ -329,7 +329,7 @@ class BinaryBHGWB:
             zmax = fmax / ff * 0.98
         Rsfr = lambda zzp1 : self.Rsfrnormless(zzp1) / hz(zzp1)
         omz = lambda lzp1 : Rsfr(np.exp(lzp1)) * np.exp(dEdfstot(lff + lzp1))
-        omegagwz, err = scipy.integrate.quad(omz, np.log(1), np.log(zmax))
+        omegagwz, err = scipy.integrate.quad(omz, np.log(1), np.log(zmax), limit=100)
         return omegagwz
 
     def OmegaGW(self, freq, Norm=56., alpha=-2.3):
