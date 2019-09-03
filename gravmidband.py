@@ -345,7 +345,8 @@ class BinaryBHGWB:
             fmax = fextended[ii][0]
         else:
             fmax = fextended[-1] * 10000
-        dEdfstot_intp = scipy.interpolate.interp1d(np.log(fextended), np.log(dEdfstot+1e-99), kind='quadratic')
+        #This must be linear or the integration gives the wrong answer!
+        dEdfstot_intp = scipy.interpolate.interp1d(np.log(fextended), np.log(dEdfstot+1e-99), kind='linear')
         omegagw_unnormed = np.array([self._omegagwz(ff, dEdfstot_intp, fmax) for ff in freq])
         #See eq. 2 of 1609.03565
         freq = freq * self.ureg("Hz")
