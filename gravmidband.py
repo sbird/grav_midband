@@ -333,7 +333,7 @@ class BinaryBHGWB:
         return omegagwz
 
     def OmegaGW(self, freq, Norm=56., alpha=-2.3):
-        """OmegaGW as a function of frequency. Normalization is in units of mergers per Gpc^3 per year"""
+        """OmegaGW as a function of frequency. Normalization is in units of mergers per Gpc^3 per year. alpha is the power law of the mass distribution assumed. We are reasonably insensitive to this, so we do not vary it in the chain."""
         Hub = 67.9 * self.ureg("km/s/Mpc")
         lnewlf = np.log10(freq[0]/1.01)
         lnewhf = np.log10(freq[-1]*110)
