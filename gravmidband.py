@@ -148,6 +148,9 @@ class SGWB:
         self.ligofreq, self.ligopsd = self.downsample(nsamples, self.ligofreq, self.ligopsd)
         self.cstring = CosmicStringGWB()
         self.binarybh = BinaryBHGWB()
+        #Pre-compute the difficult parts of the binary black hole model
+        self.bbh_singleamp_lisa = self.binarybh.OmegaGW(self.lisafreq, 1)
+        self.bbh_singleamp_ligo = self.binarybh.OmegaGW(self.ligofreq, 1)
         self.strings = strings
         self.binaries = binaries
         #This is the "true" model we are trying to detect: no cosmic strings, LIGO current best fit merger rate.
@@ -178,7 +181,13 @@ class SGWB:
     def bhbinarymerger(self, freq, amp):
         """The unresolved BH binary model. Using the model from
         https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.116.131102"""
-        return self.binarybh.OmegaGW(freq, amp)
+        if freq[0] == self.lisafreq[0] and freq[-1] == self.lisafreq[-1]
+            and np.size(freq) == np.size(self.lisafreq):
+                return amp * self.bbh_singleamp_lisa
+        if freq[0] == self.ligofreq[0] and freq[-1] == self.ligofreq[-1]
+            and np.size(freq) == np.size(self.ligofreq):
+                return amp * self.bbh_singleamp_ligo
+        return self.binarybh.OmegaGW(self.lisafreq, amp)
 
     def omegamodel(self, freq, Gmu, bbhamp):
         """Construct a model with two free parameters,
