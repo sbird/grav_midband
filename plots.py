@@ -20,8 +20,8 @@ def make_sgwb_plot():
     freqs = np.logspace(-7, 4, 200)
 
     csgw = gravmidband.CosmicStringGWB()
-    omegacs = csgw.OmegaGW(freqs, 1.e-11)
-    plt.loglog(freqs, omegacs, "-", color="blue", label="CS: $G\mu = 10^{-11}$")
+    omegacs = csgw.OmegaGW(freqs, 1.e-12)
+    plt.loglog(freqs, omegacs, "-.", color="blue", label="CS: $G\mu = 10^{-12}$")
 
     bbh = gravmidband.BinaryBHGWB()
     omegabbh = bbh.OmegaGW(freqs)
@@ -31,4 +31,8 @@ def make_sgwb_plot():
     plt.xlabel("f (Hz)")
     plt.ylabel("$\Omega_{GW}$")
     plt.ylim(1e-20, 1)
+    plt.tight_layout()
     plt.savefig("sgwb.pdf")
+
+if __name__ == "__main__":
+    make_sgwb_plot()
