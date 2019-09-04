@@ -1,6 +1,9 @@
 """Short code to compute likelihood functions for stochastic gravitational wave background detection using a mid-band experiment.
 
-TODO: is there a LISA-specific SGWB from high redshift supermassive BH mergers?
+Neglect neutron stars because in the LISA band they are just a (small) rescaling of the SGWB amplitude.
+
+TODO: is there a LISA-specific SGWB from high redshift supermassive BH mergers or IMBHs?
+TODO: Decigo/TianQin sensitivity curve
 """
 import math
 import numpy as np
@@ -147,6 +150,8 @@ class SGWB:
         self.ligo = LIGOSensitivity()
         self.ligofreq, self.ligopsd = self.ligo.omegadens()
         self.ligofreq, self.ligopsd = self.downsample(nsamples, self.ligofreq, self.ligopsd)
+        #Expected number of ligo detections at time of LISA launch for the BBH amplitude prior.
+        self.nligo = 1000
         self.cstring = CosmicStringGWB()
         self.binarybh = BinaryBHGWB()
         #Pre-compute the difficult parts of the binary black hole model
@@ -155,8 +160,9 @@ class SGWB:
         self.strings = strings
         self.binaries = binaries
         #This is the "true" model we are trying to detect: no cosmic strings, LIGO current best fit merger rate.
-        self.lisamockdata = self.omegamodel(self.lisafreq, 0, 56.)
-        self.ligomockdata = self.omegamodel(self.ligofreq, 0, 56.)
+        self.trueparams = [0, 56.]
+        self.lisamockdata = self.omegamodel(self.lisafreq, self.trueparams[0], self.trueparams[1])
+        self.ligomockdata = self.omegamodel(self.ligofreq, self.trueparams[0], self.trueparams[1])
 
     def downsample(self, nsamples, freq, psd):
         """Downsample a sensitivity curve to a lower desired number of bins."""
@@ -206,10 +212,16 @@ class SGWB:
         0 - cosmic string tension
         1 - BH binary merger rate amplitude
         """
+        #Priors: positive BBH merger rate
         if params[1] < 0:
             return -np.inf
-        if params[0] > -14:
+        #CS string tension limit from EPTA
+        if params[0] > 2.e-11:
             return -np.inf
+        #ligo prior: gaussian on BBH merger rate with central value of the true value.
+        totbins = np.size(self.lisafreq) + np.size(self.ligofreq)
+        like = (params[1] - self.trueparams[1])**2 / self.nligo * totbins
+
         like = 0
         if lisa:
             lisamodel = self.omegamodel(self.lisafreq, np.exp(params[0]), params[1])
@@ -218,7 +230,6 @@ class SGWB:
             ligomodel = self.omegamodel(self.ligofreq, np.exp(params[0]), params[1])
             #This is - the signal to noise ratio squared.
             like += - 1 * np.trapz(((ligomodel - self.ligomockdata)/ self.ligopsd)**2, x=self.ligofreq)
-        #ligo/lisa prior?
         return like
 
     def do_sampling(self, savefile, nwalkers=10, burnin=3000, nsamples = 3000, while_loop=True, maxsample=20):
