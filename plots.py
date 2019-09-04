@@ -3,8 +3,10 @@ import math
 import numpy as np
 import pint
 import matplotlib.pyplot as plt
-
+import matplotlib
 import gravmidband
+
+matplotlib.use("PDF")
 
 def make_sgwb_plot():
     """Plot an example stochastic gravitational wave background"""
@@ -28,3 +30,5 @@ def make_sgwb_plot():
     plt.legend(loc="upper left")
     plt.xlabel("f (Hz)")
     plt.ylabel("$\Omega_{GW}$")
+    plt.ylim(1e-20, 1)
+    plt.savefig("sgwb.pdf")
