@@ -181,11 +181,10 @@ class SGWB:
     def bhbinarymerger(self, freq, amp):
         """The unresolved BH binary model. Using the model from
         https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.116.131102"""
-        if freq[0] == self.lisafreq[0] and freq[-1] == self.lisafreq[-1]
-            and np.size(freq) == np.size(self.lisafreq):
+        isfreq = lambda lf : (freq[0] == lf[0]) * (freq[-1] == lf[-1]) * np.size(freq) == np.size(lf)
+        if isfreq(self.lisafreq):
                 return amp * self.bbh_singleamp_lisa
-        if freq[0] == self.ligofreq[0] and freq[-1] == self.ligofreq[-1]
-            and np.size(freq) == np.size(self.ligofreq):
+        if isfreq(self.ligofreq):
                 return amp * self.bbh_singleamp_ligo
         return self.binarybh.OmegaGW(self.lisafreq, amp)
 
@@ -284,7 +283,7 @@ class BinaryBHGWB:
         return rhoc / 8 / math.pi/ self.ureg.newtonian_constant_of_gravitation
 
     def Rsfrnormless(self, zzp1):
-        """Black hole merger rate as a function of the star formation rate. Unnormalized."""
+        """Black hole merger rate as a function of the star formation rate. Normalized to unity at =zm."""
         return self.a * np.exp(self.b * (zzp1 - 1 - self.zm)) / (self.a - self.b + self.b * np.exp(self.a*(zzp1 - 1 - self.zm)))
 
     def fmergerV2(self, msum):
