@@ -1,6 +1,7 @@
 """Short code to compute likelihood functions for stochastic gravitational wave background detection using a mid-band experiment.
 
-TODO: fix the CS plot. NS background."""
+TODO: is there a LISA-specific SGWB from high redshift supermassive BH mergers?
+"""
 import math
 import numpy as np
 import emcee
@@ -253,6 +254,8 @@ class BinaryBHGWB:
     def __init__(self):
         self.ureg = ureg
         self.Normunit = 1*self.ureg("Gpc^-3/year")
+        #We don't need to marginalise these parameters as they do not change
+        #the shape at low frequencies, only the normalization.
         self.b = 1.5
         self.a = 1.92
         self.zm = 2.6
