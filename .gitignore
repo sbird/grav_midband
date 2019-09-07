@@ -1,0 +1,8 @@
+*.aux
+*.bbl
+*.blg
+*.log
+*.swp
+*Notes.bib
+gravmidband.pdf
+__pycache__
