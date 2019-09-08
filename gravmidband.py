@@ -2,8 +2,7 @@
 
 Neglect neutron stars because in the LISA band they are just a (small) rescaling of the SGWB amplitude.
 
-TODO: is there a LISA-specific SGWB from high redshift supermassive BH mergers or IMBHs?
-TODO: Decigo/TianQin sensitivity curve
+TODO: midband Sn1a background and perhaps a LISA-specific SGWB from high redshift supermassive BH mergers, EMRIs or IMBHs
 """
 import math
 import numpy as np
