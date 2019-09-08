@@ -82,6 +82,55 @@ class LISASensitivity(Sensitivity):
         """Get the root power spectral density in Hz^[-1/2]"""
         return self.lisa[:,0], self.lisa[:,1]
 
+class SatelliteSensitivity(Sensitivity):
+    """Satellite sensitivity curve as a function of frequency
+       using the formula from https://arxiv.org/abs/gr-qc/9909080
+       or eq. 2 of 1512.02076 in Hz^(-1/2)."""
+    def __init__(self, satellite = "lisa"):
+        super().__init__()
+        # Output Curve type is Root Spectral Density, per root Hz
+        # f [Hz]    hf [Hz^(-1/2)]
+        #self.lisaintp = scipy.interpolate.interp1d(self.lisa[:,0], self.lisa[:,1])
+        #Nominal 4 year LISA mission
+        self.length = 4 * 3.154e7
+        #Speed of light in m/s
+        self.light = 299792458
+        if satellite == "lisa":
+            self.satfreq = np.logspace(np.log10(1.95e-7), np.log10(2.08), 400)
+            # The satellite arm length
+            self.L0 = 2.5e9
+            #The acceleration noise
+            self.Sa = 3.e-15**2
+            #The position noise
+            self.Sx = 1.5e-11**2
+        elif satellite == "tianqin":
+            self.satfreq = np.logspace(-5, 1, 400)
+            self.L0 = np.sqrt(3) * 1.e8
+            self.Sa = 1.e-15**2
+            self.Sx = 1.e-12**2
+        elif satellite == "bdecigo":
+            self.satfreq = np.logspace(-2, 2, 400)
+            self.L0 = 1.e5
+            self.Sa = (1.e-16/30)**2
+            #This number is not in the DECIGO 2017 paper.
+            #It is derived by requiring that the strain sensitivity be at 2x10^-23 /Hz^1/2.
+            self.Sx = 3.e-18**2
+
+    def PSD(self):
+        """Get the root power spectral density in Hz^[-1/2]"""
+        return self.satfreq, self.noisepsd(self.satfreq)
+
+    def noisepsd(self, freq):
+        """The root power spectral density computed analytically from
+        https://arxiv.org/abs/gr-qc/9909080 or eq. 2 of 1512.02076 in Hz^(-1/2)."""
+        RR = np.sqrt(self.transfer(2 * math.pi * freq / self.light))
+        hf2 = self.Sx / self.L0**2 + self.Sa/ (2 * math.pi * freq)**4 / self.L0**2 * ( 1 + 1.e-4 / freq)
+        return 2 / RR * np.sqrt(hf2)
+
+    def transfer(self, w):
+        """The GW transfer function"""
+        return 8./15 / ( 1 + (w * self.L0 / 0.41 / math.pi)**2)
+
 class LIGOSensitivity(Sensitivity):
     """LIGO sensitivity curve as a function of frequency"""
     def __init__(self, dataset="A+"):
@@ -118,23 +167,6 @@ class LIGOSensitivity(Sensitivity):
         #charstrain = np.sqrt(self.aligo[:,0]) * self.aligo[:,1]
         return self.aligo[:,0], self.aligo[:,1]
 
-class LIGOO1Sensitivity(Sensitivity):
-    """LIGO sensitivity curve as a function of frequency"""
-    def __init__(self):
-        super().__init__()
-        #Power spectral density strain noise amplitude from
-        #https://dcc.ligo.org/public/0149/T1800044/005/aLIGODesign.txt
-        #f(Hz)     PSD (Hz^-1/2)
-        self.ligoO1ff = np.loadtxt("LIGO_O1_freqVector.txt")
-        self.ligoO1psd = np.loadtxt("LIGO_O1_psd.txt")
-
-    def PSD(self):
-        """Get the root power spectral density in Hz^[-1/2]"""
-        #The input data is in strain power spectral density noise amplitude.
-        #The (dimensionless) characteristic strain is
-        #charstrain = np.sqrt(self.aligo[:,0]) * self.aligo[:,1]
-        return self.ligoO1ff, self.ligoO1psd
-
 class SGWB:
     """Class to contain SGWBs.
     Args:
@@ -143,7 +175,7 @@ class SGWB:
     """
     def __init__(self, nsamples=400, strings=True, binaries=True):
         self.ureg = ureg
-        self.lisa = LISASensitivity()
+        self.lisa = SatelliteSensitivity(satellite = "lisa")
         self.lisafreq, self.lisapsd = self.lisa.omegadens()
         self.lisafreq, self.lisapsd = self.downsample(nsamples, self.lisafreq, self.lisapsd)
 

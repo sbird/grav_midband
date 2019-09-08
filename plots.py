@@ -10,12 +10,17 @@ matplotlib.use("PDF")
 
 def make_sgwb_plot():
     """Plot an example stochastic gravitational wave background"""
-    lisa = gravmidband.LISASensitivity()
     ligo = gravmidband.LIGOSensitivity()
-    saff, sapo = lisa.omegadens()
+    #lisa = gravmidband.LISASensitivity()
+    #saff, sapo = lisa.omegadens()
     goff, gopo = ligo.omegadens()
-    plt.loglog(saff, sapo, "--", color="green", label="LISA")
+    #plt.loglog(saff, sapo, "-", color="green", label="LISA")
     plt.loglog(goff, gopo, "-", color="black", label="LIGO")
+
+    for sat in ("lisa", "tianqin", "bdecigo"):
+        ss = gravmidband.SatelliteSensitivity(satellite = sat)
+        sff, spo = ss.omegadens()
+        plt.loglog(sff, spo, "--", label=sat)
 
     freqs = np.logspace(-7, 4, 200)
 
