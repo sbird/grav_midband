@@ -26,7 +26,7 @@ def gelman_rubin(chain):
     R = np.sqrt(var_t / W)
     return R
 
-def hz(zzp1):
+def HubbleEz(zzp1):
     """Dimensionless part of the hubble rate. Argument is 1+z"""
     return np.sqrt(0.3 * zzp1**3 + 0.7)
 
@@ -166,79 +166,80 @@ class LIGOSensitivity(Sensitivity):
         #charstrain = np.sqrt(self.aligo[:,0]) * self.aligo[:,1]
         return self.aligo[:,0], self.aligo[:,1]
 
-class SGWB:
-    """Class to contain SGWBs.
-    Args:
-    maxfreq - maximum LIGO frequency, 400 Hz
-    minfreq - minimum LISA frequency, 10^-5 Hz
-    """
-    def __init__(self, nsamples=400, strings=True, binaries=True):
-        self.ureg = ureg
-        self.lisa = SatelliteSensitivity(satellite = "lisa")
-        self.lisafreq, self.lisapsd = self.lisa.omegadens()
-        self.lisafreq, self.lisapsd = self.downsample(nsamples, self.lisafreq, self.lisapsd)
+class SGWBExperiment:
+    """Helper class to hold pre-computed parts of the experimental data,
+       presenting a consistent interface for different experiments."""
+    def __init__(self, binarybh, cstring, sensitivity, trueparams, nsamples=400):
+        self.cstring = cstring
+        self.sensitivity = sensitivity
+        self.freq, self.psd = sensitivity.omegadens()
+        self.freq, self.psd = self.downsample(nsamples, self.freq, self.psd)
+        self.bbh_singleamp = binarybh.OmegaGW(self.freq, Norm=1)
+        self.mockdata = self.cosmicstringmodel(trueparams[0])
+        self.mockdata += self.bhbinarymerger(trueparams[1])
 
-        self.ligo = LIGOSensitivity()
-        self.ligofreq, self.ligopsd = self.ligo.omegadens()
-        self.ligofreq, self.ligopsd = self.downsample(nsamples, self.ligofreq, self.ligopsd)
-        #Expected number of ligo detections at time of LISA launch for the BBH amplitude prior.
-        self.nligo = 1000
-        self.cstring = CosmicStringGWB()
-        self.binarybh = BinaryBHGWB()
-        #Pre-compute the difficult parts of the binary black hole model
-        self.bbh_singleamp_lisa = self.binarybh.OmegaGW(self.lisafreq, 1)
-        self.bbh_singleamp_ligo = self.binarybh.OmegaGW(self.ligofreq, 1)
-        self.strings = strings
-        self.binaries = binaries
-        #This is the "true" model we are trying to detect: no cosmic strings, LIGO current best fit merger rate.
-        self.trueparams = [0, 56.]
-        self.lisamockdata = self.omegamodel(self.lisafreq, self.trueparams[0], self.trueparams[1])
-        self.ligomockdata = self.omegamodel(self.ligofreq, self.trueparams[0], self.trueparams[1])
 
     def downsample(self, nsamples, freq, psd):
-        """Downsample a sensitivity curve to a lower desired number of bins."""
+        """Down-sample a sensitivity curve to a lower desired number of bins."""
         intp = scipy.interpolate.interp1d(np.log(freq), np.log(psd))
         jump = int(np.size(freq)/nsamples)
         return freq[::jump], np.exp(intp(np.log(freq[::jump])))
 
-    def cosmicstringmodel(self, freq, Gmu):
+    def cosmicstringmodel(self, Gmu):
         """The cosmic string SGWB model."""
         if Gmu == 0:
             return 0
-        return self.cstring.OmegaGW(freq, Gmu)
+        return self.cstring.OmegaGW(self.freq, Gmu)
 
-    def whitedwarfmodel(self, freq, number):
+    def whitedwarfmodel(self, number):
         """The white dwarf background model.
         This can be neglected: alone of all the signals the WD background is
         localised in the galaxy, and this should allow it to be cleaned.
         It will be anisotropic and thus have a yearly modulation.
         """
-        _ = (freq, number)
+        _ = (number)
         return 0
 
-    def bhbinarymerger(self, freq, amp):
+    def bhbinarymerger(self, amp):
         """The unresolved BH binary model. Using the model from
         https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.116.131102"""
-        isfreq = lambda lf : (freq[0] == lf[0]) * (freq[-1] == lf[-1]) * np.size(freq) == np.size(lf)
-        if isfreq(self.lisafreq):
-                return amp * self.bbh_singleamp_lisa
-        if isfreq(self.ligofreq):
-                return amp * self.bbh_singleamp_ligo
-        return self.binarybh.OmegaGW(self.lisafreq, amp)
+        return amp * self.bbh_singleamp
 
-    def omegamodel(self, freq, Gmu, bbhamp):
+    def omegamodel(self, Gmu, bbhamp):
         """Construct a model with two free parameters,
            combining multiple SGWB sources."""
-        csgwb = 0
-        bbhgb = 0
-        if self.strings:
-            csgwb = self.cosmicstringmodel(freq, Gmu)
         #wdgwb = self.whitedwarfmodel(self.freq, wdnumber)
-        if self.binaries:
-            bbhgb = self.bhbinarymerger(freq, bbhamp)
-        return csgwb + bbhgb
+        return self.cosmicstringmodel(Gmu) + self.bhbinarymerger(bbhamp)
 
-    def lnlikelihood(self, params, lisa=True, ligo=True):
+class Likelihoods:
+    """Class to perform likelihood analysis on SGWB.
+    Args:
+    """
+    def __init__(self, nsamples=400, strings=True, binaries=True, ligo = True, satellites="lisa"):
+        self.ureg = ureg
+        self.strings = strings
+        self.binaries = binaries
+
+        self.cstring = CosmicStringGWB()
+        self.binarybh = BinaryBHGWB()
+
+        if isinstance(satellites, str):
+            satellites = (satellites,)
+
+        self.sensitivities = []
+        if ligo:
+            self.sensitivities += [LIGOSensitivity(),]
+        if satellites[0] != "":
+            self.sensitivities += [SatelliteSensitivity(satellite = sat) for sat in satellites]
+
+        #This is the "true" model we are trying to detect: no cosmic strings, LIGO current best fit merger rate.
+        self.trueparams = [0, 56.]
+        self.experiments = [SGWBExperiment(self.binarybh, self.cstring, sens, self.trueparams, nsamples=nsamples) for sens in self.sensitivities]
+
+        #Expected number of ligo detections at time of LISA launch for the BBH amplitude prior.
+        self.nligo = 1000
+
+    def lnlikelihood(self, params):
         """Likelihood parameters:
         0 - cosmic string tension
         1 - BH binary merger rate amplitude
@@ -247,20 +248,17 @@ class SGWB:
         if params[1] < 0:
             return -np.inf
         #CS string tension limit from EPTA
-        if params[0] > 2.e-11:
+        if params[0] > np.log(2.e-11):
             return -np.inf
-        #ligo prior: gaussian on BBH merger rate with central value of the true value.
-        totbins = np.size(self.lisafreq) + np.size(self.ligofreq)
-        like = (params[1] - self.trueparams[1])**2 / self.nligo * totbins
+        #LIGO prior: Gaussian on BBH merger rate with central value of the true value.
+        ampprior = -1 * (params[1] - self.trueparams[1])**2 / self.nligo
 
         like = 0
-        if lisa:
-            lisamodel = self.omegamodel(self.lisafreq, np.exp(params[0]), params[1])
-            like += - 1 * np.trapz(((lisamodel - self.lisamockdata)/ self.lisapsd)**2, x=self.lisafreq)
-        if ligo:
-            ligomodel = self.omegamodel(self.ligofreq, np.exp(params[0]), params[1])
-            #This is - the signal to noise ratio squared.
-            like += - 1 * np.trapz(((ligomodel - self.ligomockdata)/ self.ligopsd)**2, x=self.ligofreq)
+
+        for exp in self.experiments:
+            model = exp.omegamodel(np.exp(params[0]), params[1])
+            like += - 1 * np.trapz(((model - exp.mockdata)/ exp.psd)**2, x=exp.freq)
+            like += ampprior * exp.freq
         return like
 
     def do_sampling(self, savefile, nwalkers=10, burnin=3000, nsamples = 3000, while_loop=True, maxsample=20):
@@ -298,8 +296,8 @@ class BinaryBHGWB:
         self.Normunit = 1*self.ureg("Gpc^-3/year")
         #We don't need to marginalise these parameters as they do not change
         #the shape at low frequencies, only the normalization.
-        self.b = 1.5
-        self.a = 1.92
+        self.bb = 1.5
+        self.aa = 1.92
         self.zm = 2.6
         # This is the Ajith 2011 (0909.2867) template for the spectral energy density of the black holes *at source* redshift.
         # This needs to be adjusted to the observed frame redshift.
@@ -329,7 +327,7 @@ class BinaryBHGWB:
 
     def Rsfrnormless(self, zzp1):
         """Black hole merger rate as a function of the star formation rate. Normalized to unity at =zm."""
-        return self.a * np.exp(self.b * (zzp1 - 1 - self.zm)) / (self.a - self.b + self.b * np.exp(self.a*(zzp1 - 1 - self.zm)))
+        return self.aa * np.exp(self.bb * (zzp1 - 1 - self.zm)) / (self.aa - self.bb + self.bb * np.exp(self.aa*(zzp1 - 1 - self.zm)))
 
     def fmergerV2(self, msum):
         """Merger phase frequency"""
@@ -380,9 +378,9 @@ class BinaryBHGWB:
             return 0
         if fmax < ff * zmax:
             zmax = fmax / ff * 0.98
-        Rsfr = lambda zzp1 : self.Rsfrnormless(zzp1) / hz(zzp1)
+        Rsfr = lambda zzp1 : self.Rsfrnormless(zzp1) / HubbleEz(zzp1)
         omz = lambda lzp1 : Rsfr(np.exp(lzp1)) * np.exp(dEdfstot(lff + lzp1))
-        omegagwz, err = scipy.integrate.quad(omz, np.log(1), np.log(zmax), limit=100)
+        omegagwz, _ = scipy.integrate.quad(omz, np.log(1), np.log(zmax), limit=100)
         return omegagwz
 
     def OmegaGW(self, freq, Norm=56., alpha=-2.3):
@@ -413,21 +411,29 @@ def gcorr(x):
     if x > 753.946:
         return 106.6
     if x > 73.9827:
-        return 207.04170721279553 + 9.297437227007177e8/x**4 - 6.762901334043625e7/x**3 + 1.5888320597630164e6/x**2 - 17782.040653778313/x - 0.3100369947620232*x + 0.0005219361630722421*x**2 - 4.5089224156018806e-7*x**3 + 1.571478658251381e-10*x**4
+        return 207.04170721279553 + 9.297437227007177e8/x**4 - 6.762901334043625e7/x**3 + 1.5888320597630164e6/x**2 - \
+            17782.040653778313/x - 0.3100369947620232*x + 0.0005219361630722421*x**2 - 4.5089224156018806e-7*x**3 + 1.571478658251381e-10*x**4
     if x > 19.2101:
-        return 25.617077215691925 - 85049.61151267929/x**4 + 44821.06301089602/x**3 - 9407.524062731489/x**2 + 1010.3559753329803/x + 1.9046169770731767*x -  0.02182528531424682*x**2 + 0.00013717391195802956*x**3 - 4.656717468928253e-7*x**4
+        return 25.617077215691925 - 85049.61151267929/x**4 + 44821.06301089602/x**3 - 9407.524062731489/x**2 + 1010.3559753329803/x + 1.9046169770731767*x -  \
+            0.02182528531424682*x**2 + 0.00013717391195802956*x**3 - 4.656717468928253e-7*x**4
     if x > 0.210363:
-        return 96.03236599599052 + 0.1417211377127251/x**4 - 1.9033759380298605/x**3 + 9.91065103843345/x**2 - 26.492041757131332/x - 1.923898527856908*x +  0.18435280458948589*x**2 - 0.008350062215001603*x**3 + 0.000158735905184788*x**4
+        return 96.03236599599052 + 0.1417211377127251/x**4 - 1.9033759380298605/x**3 + 9.91065103843345/x**2 - 26.492041757131332/x - 1.923898527856908*x +  0.18435280458948589*x**2 - \
+            0.008350062215001603*x**3 + 0.000158735905184788*x**4
     if x > 0.152771:
-        return -2.0899590637819996e8 - 3113.914061747819/x**4 + 140186.13699256277/x**3 - 2.7415777741917237e6/x**2 + 3.0404304467460793e7/x + 9.110822620276868e8*x - 2.4573038140264993e9*x**2 + 3.7443023200934935e9*x**3 - 2.4636941241588144e9*x**4
+        return -2.0899590637819996e8 - 3113.914061747819/x**4 + 140186.13699256277/x**3 - 2.7415777741917237e6/x**2 + 3.0404304467460793e7/x + 9.110822620276868e8*x \
+            - 2.4573038140264993e9*x**2 + 3.7443023200934935e9*x**3 - 2.4636941241588144e9*x**4
     if x > 0.0367248:
-        return 5426.500494710776 + 0.0019390100970067777/x**4 - 0.23020238075499902/x**3 + 11.587823813540876/x**2 - 322.51882049359654/x - 55993.18120267802*x + 349376.7985871369*x**2 - 1.2042764400287867e6*x**3 + 1.7809006388749087e6*x**4
+        return 5426.500494710776 + 0.0019390100970067777/x**4 - 0.23020238075499902/x**3 + 11.587823813540876/x**2 - 322.51882049359654/x - 55993.18120267802*x \
+            + 349376.7985871369*x**2 - 1.2042764400287867e6*x**3 + 1.7809006388749087e6*x**4
     if x > 0.00427032:
-        return -195.37500200383414 - 3.246844915516518e-8/x**4 + 0.000028390675511486528/x**3 - 0.010121020979848003/x**2 + 1.9052124373133226/x + 13012.873468646329*x - 473484.5788624826*x**2 + 9.244933716566762e6*x**3 - 7.352186782452533e7*x**4
+        return -195.37500200383414 - 3.246844915516518e-8/x**4 + 0.000028390675511486528/x**3 - 0.010121020979848003/x**2 + 1.9052124373133226/x + 13012.873468646329*x \
+            - 473484.5788624826*x**2 + 9.244933716566762e6*x**3 - 7.352186782452533e7*x**4
     if x > 0.000163046:
-        return 6.995576000906495 - 5.271793610584592e-15/x**4 + 1.1471366111587497e-10/x**3 - 9.017840481639097e-7/x**2 + 0.0022702982380190806/x + 2706.0190947576525*x - 1.1981368143068189e6*x**2 + 2.6230001478632784e8*x**3 - 2.1859643005333782e10*x**4
+        return 6.995576000906495 - 5.271793610584592e-15/x**4 + 1.1471366111587497e-10/x**3 - 9.017840481639097e-7/x**2 + 0.0022702982380190806/x + 2706.0190947576525*x \
+            - 1.1981368143068189e6*x**2 + 2.6230001478632784e8*x**3 - 2.1859643005333782e10*x**4
     if x > 0.0000110255:
-        return 1.3910688031037668 - 1.0512592071931046e-19/x**4 + 2.671929070189596e-14/x**3 - 2.5014060168690585e-9/x**2 + 0.00010456662194366741/x + 4706.80818171218*x + 6.752939034535752e6*x**2 + 2.531715178089083e12*x**3 - 1.05933524939722e16*x**4
+        return 1.3910688031037668 - 1.0512592071931046e-19/x**4 + 2.671929070189596e-14/x**3 - 2.5014060168690585e-9/x**2 + 0.00010456662194366741/x + 4706.80818171218*x \
+            + 6.752939034535752e6*x**2 + 2.531715178089083e12*x**3 - 1.05933524939722e16*x**4
     return 3.17578
 
 #Here comes the cosmic string model
@@ -517,7 +523,7 @@ class CosmicStringGWB:
             #print("tF old: ", ts, "new:", np.exp(sol.root))
             ts = np.exp(sol.root)
 
-        omega ,err = scipy.integrate.quad(self.omegaintegrand, np.log(ts), np.log(te), args=(Gmu, freq/kk), epsabs=1e-10, epsrel=1e-6)
+        omega , _ = scipy.integrate.quad(self.omegaintegrand, np.log(ts), np.log(te), args=(Gmu, freq/kk), epsabs=1e-10, epsrel=1e-6)
         prefac = 2 * kk / freq * self.Fa * self.Gammak(kk) * Gmu**2 / (self.alpha * (self.alpha + self.Gamma * Gmu))
         return omega * prefac
 
