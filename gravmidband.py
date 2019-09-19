@@ -559,3 +559,8 @@ def test_cs():
     assert np.abs(cs.OmegaEpochk(1.e-11, 10, 1, cs.teq, cs.t0) / 1.55956e-17 - 1) < 2.e-3
     tot = cs.OmegaGW([1e-6,20], 1e-11)
     assert np.all(np.abs(tot - np.array([1.05797682e-09, 1.69091713e-10])) < 2.e-3)
+
+
+if __name__=="__main__":
+    like = Likelihoods(nsamples=400, strings=True, binaries=True, ligo = True, satellites="lisa")
+    like.do_sampling(savefile = "samples_ligo_lisa_string_bbh.txt")
