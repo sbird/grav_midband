@@ -258,7 +258,7 @@ class Likelihoods:
         for exp in self.experiments:
             model = exp.omegamodel(np.exp(params[0]), params[1])
             like += - 1 * np.trapz(((model - exp.mockdata)/ exp.psd)**2, x=exp.freq)
-            like += ampprior * exp.freq
+            like += ampprior * np.size(exp.freq)
         return like
 
     def do_sampling(self, savefile, nwalkers=10, burnin=3000, nsamples = 3000, while_loop=True, maxsample=20):
