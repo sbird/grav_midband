@@ -187,7 +187,7 @@ class SGWBExperiment:
 
     def cosmicstringmodel(self, Gmu):
         """The cosmic string SGWB model."""
-        if Gmu == 0:
+        if Gmu <= 0:
             return 0
         return self.cstring.OmegaGW(self.freq, Gmu)
 
@@ -250,6 +250,9 @@ class Likelihoods:
         #CS string tension limit from EPTA
         if params[0] > np.log(2.e-11):
             return -np.inf
+        #Prevent underflow
+        if params[0] < -80:
+            return -np.inf
         #LIGO prior: Gaussian on BBH merger rate with central value of the true value.
         ampprior = -1 * (params[1] - self.trueparams[1])**2 / self.nligo
 
@@ -259,9 +262,10 @@ class Likelihoods:
             model = exp.omegamodel(np.exp(params[0]), params[1])
             like += - 1 * np.trapz(((model - exp.mockdata)/ exp.psd)**2, x=exp.freq)
             like += ampprior * np.size(exp.freq)
+        #print(np.exp(params[0]), like)
         return like
 
-    def do_sampling(self, savefile, nwalkers=10, burnin=3000, nsamples = 3000, while_loop=True, maxsample=20):
+    def do_sampling(self, savefile, nwalkers=100, burnin=300, nsamples = 300, while_loop=True, maxsample=200):
         """Do the sampling with emcee"""
         #Limits
         #Say Gmu ranges from exp(-45) - exp(-14) and merger rate between 0 and 100.
@@ -523,7 +527,7 @@ class CosmicStringGWB:
             #print("tF old: ", ts, "new:", np.exp(sol.root))
             ts = np.exp(sol.root)
 
-        omega , _ = scipy.integrate.quad(self.omegaintegrand, np.log(ts), np.log(te), args=(Gmu, freq/kk), epsabs=1e-10, epsrel=1e-6)
+        omega , _ = scipy.integrate.quad(self.omegaintegrand, np.log(ts), np.log(te), args=(Gmu, freq/kk), epsabs=1e-10, epsrel=1e-6, limit=150)
         prefac = 2 * kk / freq * self.Fa * self.Gammak(kk) * Gmu**2 / (self.alpha * (self.alpha + self.Gamma * Gmu))
         return omega * prefac
 
