@@ -11,8 +11,6 @@ def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None):
     samples = np.loadtxt(chainfile)
     ticks = {}
     pnames = [ r"G\mu", r"BBH rate"]
-    #Ticks we want to show for each parameter
-    #ticks = {pnames[0]: [1.5, 2.0, 2.5], pnames[1]: [-0.6,-0.3, 0.]}
     prange = None
     if ranges is not None:
         prange = {pnames[i] : ranges[i] for i in range(len(pnames))}
@@ -28,7 +26,9 @@ def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None):
     subplot_instance = gdp.getSubplotPlotter()
     subplot_instance.triangle_plot([posterior_MCsamples], filled=True)
 #     colour_array = np.array(['black', 'red', 'magenta', 'green', 'green', 'purple', 'turquoise', 'gray', 'red', 'blue'])
-
+    #Ticks we want to show for each parameter
+    ticks = {pnames[0]: [np.log(1e-35), np.log(1e-25), np.log(1e-15)]}
+    ticklabels = {pnames[0] : [r"$10^{-35}$", r"$10^{-25}$", r"$10^{-15}$"]}
     for pi in range(samples.shape[1]):
         for pi2 in range(pi + 1):
             #Place horizontal and vertical lines for the true point
@@ -37,15 +37,14 @@ def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None):
             ax.xaxis.label.set_size(16)
             if pi == samples.shape[1]-1 and pnames[pi2] in ticks:
                 ax.set_xticks(ticks[pnames[pi2]])
-            if pi2 == 0 and pnames[pi] in ticks:
-                ax.set_yticks(ticks[pnames[pi]])
+                ax.set_xticklabels(ticklabels[pnames[pi2]])
             ax.axvline(true_parameter_values[pi2], color='gray', ls='--', lw=2)
             if pi2 < pi:
                 ax.axhline(true_parameter_values[pi], color='gray', ls='--', lw=2)
     plt.savefig(savefile)
 
 if __name__ == "__main__":
-    true_vals = [np.log(1e-80), 56]
+    true_vals = [0, 56]
     #ranges
-    ranges = [[np.log(1e-80), np.log(2e-11)], [0, 100]]
+    ranges = [[-80, np.log(2e-11)], [0, 100]]
     make_plot("samples_ligo_lisa_string_bbh.txt", "like_ligo_lisa_string_bbh.pdf", true_parameter_values = true_vals, ranges=ranges)
