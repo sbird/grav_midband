@@ -532,6 +532,84 @@ class CosmicStringGWB:
         assert np.size(P4R) == np.size(freq)
         return P4R
 
+class PhaseTransition:
+    """Model for the gravitational wave contribution from phase transitions. From Yanou's notebook. See for reference:
+    1903.09642, 1809.08242. Assume Gamma_dec > H_* There are contributions from sound waves and from turbulence.
+
+    For sound waves: for fixed overall energy scale, if alpha inc then Ts dec  and cRs inc. alpha: strength of the PT.
+
+    GW from turbulence: important if SW period is much shorter than 1 Hubble time, corresponds to plasma entering non-linear regime after oscillation (SW) period. Decreasing cRs->increasing turbulance contribution relative to SW."""
+    def __init__(self):
+        #See 1004.4187 for vw != 1
+        self.vw = 1
+        #Speed of light = 1
+        self.cs = 1/np.sqrt(3)
+        #Not sure what this is?
+        self.h2 = 0.5
+        #Planck mass in GeV/c^2
+        self.Mp = 1.220910e19
+
+    def Hubble(self, T):
+        """Hubble rate at high temperatures"""
+        return 1.66 * np.sqrt(gcorr(T)) * T**2 / self.Mp
+
+    def Rs(self, cRs, Ts):
+        """Bubble size at t*"""
+        return cRs / self.Hubble(Ts)
+
+    def alphaeff(self, alpha, kcol):
+        """What is this? alpha: strength of the PT."""
+        return alpha * (1-kcol)
+
+    def kkSW(self, alpha, kcol):
+        """The sound wave scale? I think?"""
+        aeff = self.alphaeff(alpha, kcol)
+        return aeff / alpha * aeff / (0.73 + 0.0083 * np.sqrt(aeff) + aeff)
+
+    def Uff(self, alpha, kcol):
+        """Effective potential?"""
+        aeff = self.alphaeff(alpha, kcol)
+        return 0.75 * aeff / (1 + aeff) * self.kkSW(alpha, kcol)
+
+    def tauSW(self, cRs, Ts, alpha, kcol):
+        """Sound wave optical depth"""
+        return np.min([1/self.Hubble(Ts), self.Rs(cRs, Ts)/self.Uff(alpha, kcol)])
+
+    def ffSW(self, cRs, Ts):
+        """Sound wave frequency"""
+        return 3.4 / ((self.vw - self.cs) * self.Rs(cRs, Ts))
+
+    def OmegaSWs(self, fs, cRs, Ts, alpha, kcol):
+        """GW spectrum at percolation time t*"""
+        tauSW = self.tauSW(cRs, Ts, alpha, kcol)
+        ffrat = fs / self.ffSW(cRs, Ts)
+        return 0.38 * cRs * self.Hubble(Ts) * tauSW * self.kkSW(alpha, kcol) * alpha / (1 + alpha) * ffrat**3 / ( 1 + 0.75 * ffrat**2)**(7./2)
+
+    def fss(self, f, Ts, Trh):
+        """Frequency at some temp?"""
+        return f * self.Hubble(Ts) * (100 / gcorr(Trh))**(1./6) * (100 / Trh) / 1.65e-5
+
+    def OmegaSW0(self, f, cRs, Ts, alpha, kcol, Trh):
+        """GW spectrum at present day"""
+        fss = self.fss(f, Ts, Trh)
+        return 1.67e-5 * self.h2 * (100 / gcorr(Trh))**(1./3.) * self.OmegaSWs(fss, cRs, Ts, alpha, kcol)
+
+    def ffTB(self, cRs, Ts):
+        """Frequency of turbulent contributions"""
+        return 3.9 / ((self.vw - self.cs) * self.Rs(cRs, Ts))
+
+    def OmegaTBs(self, fs, cRs, Ts, alpha, kcol):
+        """Omega Turbulent at t*"""
+        ffrat = fs / self.ffTB(cRs, Ts)
+        ffdep = ffrat**3 * (1 + ffrat)**(-11/3.) / (1 + 8*math.pi*fs/self.Hubble(Ts))
+        return 6.8 * cRs * (1 - self.Hubble(Ts) * self.tauSW(cRs, Ts, alpha, kcol)) * (self.kkSW(alpha, kcol)*alpha / (1 + alpha))**(3/2.) * ffdep
+
+    def OmegaTB0(self, fs, cRs, Ts, alpha, kcol, Trh):
+        """Omega Turbulent at t_*"""
+        fss = self.fss(fs, Ts, Trh)
+        omegatbs = self.OmegaTBs(fss, cRs, Ts, alpha, kcol)
+        return 1.67e-5 * self.h2 * (100 / gcorr(Trh))**(1./3) * omegatbs
+
 def test_cs():
     """Simple test routine to check the cosmic string model matches the notebook"""
     cs = CosmicStringGWB()
