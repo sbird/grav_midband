@@ -306,7 +306,7 @@ class BinaryBHGWB:
         # This is the Ajith 2011 (0909.2867) template for the spectral energy density of the black holes *at source* redshift.
         # This needs to be adjusted to the observed frame redshift.
         #Template shape is: frequency, redshift, dEdf
-        self.Ajith_template = np.loadtxt("dEdfs_FULL_fobs_dndM_2p35_mmin_3msun_mmax_100msun_Ajith_spectrum.dat")
+        #self.Ajith_template = np.loadtxt("dEdfs_FULL_fobs_dndM_2p35_mmin_3msun_mmax_100msun_Ajith_spectrum.dat")
         #self.Ajithintp = scipy.interpolate.interp2d(self.Ajith_template[:,0], self.Ajith_template[:,1], self.Ajith_template[:,2], kind='linear')
         self.cc = (self.ureg("speed_of_light").to("m/s")).magnitude
         self.GG = ((1*self.ureg.newtonian_constant_of_gravitation).to_base_units()).magnitude
@@ -373,36 +373,18 @@ class BinaryBHGWB:
         weights[ii] *= self.dEdfsInsp(m1rep[ii], m2rep[ii], femit)
         return np.trapz([np.trapz(weights[i:i+nsamp], m2) for i in range(nsamp)], m1)
 
-    def _omegagwz(self, ff, dEdfstot, fmax):
+    def _omegagwz(self, ff, alpha=-2.3):
         """Integrand as a function of redshift, taking care of the redshifting factors."""
         #From z= 0.01 to 10.
-        lff = np.log(ff)
         zmax = 20
-        if fmax < ff:
-            return 0
-        if fmax < ff * zmax:
-            zmax = fmax / ff * 0.98
-        Rsfr = lambda zzp1 : self.Rsfrnormless(zzp1) / HubbleEz(zzp1)
-        omz = lambda lzp1 : Rsfr(np.exp(lzp1)) * np.exp(dEdfstot(lff + lzp1))
-        omegagwz, _ = scipy.integrate.quad(omz, np.log(1), np.log(zmax), limit=100)
+        omz = lambda zzp1 : self.Rsfrnormless(zzp1) / HubbleEz(zzp1) * self.dEdfstot(ff*zzp1, alpha=alpha)
+        omegagwz, _ = scipy.integrate.quad(omz, 1, zmax, limit=100)
         return omegagwz
 
     def OmegaGW(self, freq, Norm=56., alpha=-2.3):
         """OmegaGW as a function of frequency. Normalization is in units of mergers per Gpc^3 per year. alpha is the power law of the mass distribution assumed. We are reasonably insensitive to this, so we do not vary it in the chain."""
         Hub = 67.9 * self.ureg("km/s/Mpc")
-        lnewlf = np.log10(freq[0]/1.01)
-        lnewhf = np.log10(freq[-1]*110)
-        nsamp = (lnewhf - lnewlf) * 6
-        fextended = np.logspace(lnewlf, lnewhf, nsamp)
-        dEdfstot = np.array([self.dEdfstot(ff, alpha=alpha) for ff in fextended])
-        ii = np.where(dEdfstot == 0)
-        if np.size(ii) > 0:
-            fmax = fextended[ii][0]
-        else:
-            fmax = fextended[-1] * 10000
-        #This must be linear or the integration gives the wrong answer!
-        dEdfstot_intp = scipy.interpolate.interp1d(np.log(fextended), np.log(dEdfstot+1e-99), kind='linear')
-        omegagw_unnormed = np.array([self._omegagwz(ff, dEdfstot_intp, fmax) for ff in freq])
+        omegagw_unnormed = np.array([self._omegagwz(ff, alpha=alpha) for ff in freq])
         #See eq. 2 of 1609.03565
         freq = freq * self.ureg("Hz")
         normfac = (Norm * self.Normunit / Hub * freq / self.ureg("speed_of_light")**2 / self.rhocrit())
