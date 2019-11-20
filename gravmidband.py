@@ -594,8 +594,10 @@ class PhaseTransition:
         """Frequency at some temp?"""
         return f * self.Hubble(Ts) * (100 / gcorr(Trh))**(1./6) * (100 / Trh) / 1.65e-5
 
-    def OmegaSW0(self, f, cRs, Ts, alpha, Trh):
+    def OmegaSW0(self, f, cRs, Ts, alpha):
         """GW spectrum at present day"""
+        #Make instantaneous reheating approximation
+        Trh = Ts
         fss = self.fss(f, Ts, Trh)
         return 1.67e-5 * self.h2 * (100 / gcorr(Trh))**(1./3.) * self.OmegaSWs(fss, cRs, Ts, alpha)
 
@@ -609,8 +611,10 @@ class PhaseTransition:
         ffdep = ffrat**3 * (1 + ffrat)**(-11/3.) / (1 + 8*math.pi*fs/self.Hubble(Ts))
         return 6.8 * cRs * (1 - self.Hubble(Ts) * self.tauSW(cRs, Ts, alpha)) * (self.kkSW(alpha)*alpha / (1 + alpha))**(3/2.) * ffdep
 
-    def OmegaTB0(self, fs, cRs, Ts, alpha, Trh):
+    def OmegaTB0(self, fs, cRs, Ts, alpha):
         """Omega Turbulent at t_*"""
+        #Make instantaneous reheating approximation
+        Trh = Ts
         fss = self.fss(fs, Ts, Trh)
         omegatbs = self.OmegaTBs(fss, cRs, Ts, alpha)
         return 1.67e-5 * self.h2 * (100 / gcorr(Trh))**(1./3) * omegatbs
