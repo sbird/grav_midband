@@ -563,16 +563,17 @@ class PhaseTransition:
         return cRs / self.Hubble(Ts)
 
     def alphaeff(self, alpha):
-        """What is this? alpha: strength of the PT."""
+        """alpha: strength of the PT.
+        This is the PT strength minus the energy in bubble walls."""
         return alpha * (1-self.kcol)
 
     def kkSW(self, alpha):
-        """The sound wave scale? I think?"""
+        """Efficiency coefficient for sound wave GW production, eq. 3.4"""
         aeff = self.alphaeff(alpha)
         return aeff / alpha * aeff / (0.73 + 0.0083 * np.sqrt(aeff) + aeff)
 
     def Uff(self, alpha):
-        """Effective potential?"""
+        """RMS fluid velocity Uf squared. This is approximate, see eq. 3.8 of 1903.09642"""
         aeff = self.alphaeff(alpha)
         return 0.75 * aeff / (1 + aeff) * self.kkSW(alpha)
 
@@ -588,10 +589,11 @@ class PhaseTransition:
         """GW spectrum at percolation time t*"""
         tauSW = self.tauSW(cRs, Ts, alpha)
         ffrat = fs / self.ffSW(cRs, Ts)
-        return 0.38 * cRs * self.Hubble(Ts) * tauSW * self.kkSW(alpha) * alpha / (1 + alpha) * ffrat**3 / ( 1 + 0.75 * ffrat**2)**(7./2)
+        #Note cRs = R* H* as in the paper.
+        return 0.38 * cRs * self.Hubble(Ts) * tauSW * (self.kkSW(alpha) * alpha / (1 + alpha))**2 * ffrat**3 / ( 1 + 0.75 * ffrat**2)**(7./2)
 
     def fss(self, f, Ts, Trh):
-        """Frequency at some temp?"""
+        """Frequency at t*. Note we set Gamma_dec = H*. Eq. 4.7 of the ref."""
         return f * self.Hubble(Ts) * (100 / gcorr(Trh))**(1./6) * (100 / Trh) / 1.65e-5
 
     def OmegaSW0(self, f, cRs, Ts, alpha):
