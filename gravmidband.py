@@ -544,10 +544,15 @@ class PhaseTransition:
         self.vw = 1
         #Speed of light = 1
         self.cs = 1/np.sqrt(3)
-        #Not sure what this is?
-        self.h2 = 0.5
+        hub = 0.679
+        self.h2 = hub**2
         #Planck mass in GeV/c^2
         self.Mp = 1.220910e19
+        #Fraction of the phase transition energy in bubble walls.
+        #Because we are neglecting GW from bubbles, this only appears
+        #in defining alphaeff.
+        #Usually this is very small and alphaeff ~ alpha.
+        self.kcol = 1.e-11
 
     def Hubble(self, T):
         """Hubble rate at high temperatures"""
@@ -557,57 +562,57 @@ class PhaseTransition:
         """Bubble size at t*"""
         return cRs / self.Hubble(Ts)
 
-    def alphaeff(self, alpha, kcol):
+    def alphaeff(self, alpha):
         """What is this? alpha: strength of the PT."""
-        return alpha * (1-kcol)
+        return alpha * (1-self.kcol)
 
-    def kkSW(self, alpha, kcol):
+    def kkSW(self, alpha):
         """The sound wave scale? I think?"""
-        aeff = self.alphaeff(alpha, kcol)
+        aeff = self.alphaeff(alpha)
         return aeff / alpha * aeff / (0.73 + 0.0083 * np.sqrt(aeff) + aeff)
 
-    def Uff(self, alpha, kcol):
+    def Uff(self, alpha):
         """Effective potential?"""
-        aeff = self.alphaeff(alpha, kcol)
-        return 0.75 * aeff / (1 + aeff) * self.kkSW(alpha, kcol)
+        aeff = self.alphaeff(alpha)
+        return 0.75 * aeff / (1 + aeff) * self.kkSW(alpha)
 
-    def tauSW(self, cRs, Ts, alpha, kcol):
+    def tauSW(self, cRs, Ts, alpha):
         """Sound wave optical depth"""
-        return np.min([1/self.Hubble(Ts), self.Rs(cRs, Ts)/self.Uff(alpha, kcol)])
+        return np.min([1/self.Hubble(Ts), self.Rs(cRs, Ts)/self.Uff(alpha)])
 
     def ffSW(self, cRs, Ts):
         """Sound wave frequency"""
         return 3.4 / ((self.vw - self.cs) * self.Rs(cRs, Ts))
 
-    def OmegaSWs(self, fs, cRs, Ts, alpha, kcol):
+    def OmegaSWs(self, fs, cRs, Ts, alpha):
         """GW spectrum at percolation time t*"""
-        tauSW = self.tauSW(cRs, Ts, alpha, kcol)
+        tauSW = self.tauSW(cRs, Ts, alpha)
         ffrat = fs / self.ffSW(cRs, Ts)
-        return 0.38 * cRs * self.Hubble(Ts) * tauSW * self.kkSW(alpha, kcol) * alpha / (1 + alpha) * ffrat**3 / ( 1 + 0.75 * ffrat**2)**(7./2)
+        return 0.38 * cRs * self.Hubble(Ts) * tauSW * self.kkSW(alpha) * alpha / (1 + alpha) * ffrat**3 / ( 1 + 0.75 * ffrat**2)**(7./2)
 
     def fss(self, f, Ts, Trh):
         """Frequency at some temp?"""
         return f * self.Hubble(Ts) * (100 / gcorr(Trh))**(1./6) * (100 / Trh) / 1.65e-5
 
-    def OmegaSW0(self, f, cRs, Ts, alpha, kcol, Trh):
+    def OmegaSW0(self, f, cRs, Ts, alpha, Trh):
         """GW spectrum at present day"""
         fss = self.fss(f, Ts, Trh)
-        return 1.67e-5 * self.h2 * (100 / gcorr(Trh))**(1./3.) * self.OmegaSWs(fss, cRs, Ts, alpha, kcol)
+        return 1.67e-5 * self.h2 * (100 / gcorr(Trh))**(1./3.) * self.OmegaSWs(fss, cRs, Ts, alpha)
 
     def ffTB(self, cRs, Ts):
         """Frequency of turbulent contributions"""
         return 3.9 / ((self.vw - self.cs) * self.Rs(cRs, Ts))
 
-    def OmegaTBs(self, fs, cRs, Ts, alpha, kcol):
+    def OmegaTBs(self, fs, cRs, Ts, alpha):
         """Omega Turbulent at t*"""
         ffrat = fs / self.ffTB(cRs, Ts)
         ffdep = ffrat**3 * (1 + ffrat)**(-11/3.) / (1 + 8*math.pi*fs/self.Hubble(Ts))
-        return 6.8 * cRs * (1 - self.Hubble(Ts) * self.tauSW(cRs, Ts, alpha, kcol)) * (self.kkSW(alpha, kcol)*alpha / (1 + alpha))**(3/2.) * ffdep
+        return 6.8 * cRs * (1 - self.Hubble(Ts) * self.tauSW(cRs, Ts, alpha)) * (self.kkSW(alpha)*alpha / (1 + alpha))**(3/2.) * ffdep
 
-    def OmegaTB0(self, fs, cRs, Ts, alpha, kcol, Trh):
+    def OmegaTB0(self, fs, cRs, Ts, alpha, Trh):
         """Omega Turbulent at t_*"""
         fss = self.fss(fs, Ts, Trh)
-        omegatbs = self.OmegaTBs(fss, cRs, Ts, alpha, kcol)
+        omegatbs = self.OmegaTBs(fss, cRs, Ts, alpha)
         return 1.67e-5 * self.h2 * (100 / gcorr(Trh))**(1./3) * omegatbs
 
 def test_cs():
