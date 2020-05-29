@@ -2,7 +2,7 @@
 
 Neglect neutron stars because in the LISA band they are just a (small) rescaling of the SGWB amplitude.
 
-TODO: midband Sn1a background and perhaps a LISA-specific SGWB from high redshift supermassive BH mergers, EMRIs or IMBHs
+LISA-specific SGWB from high redshift supermassive BH mergers, EMRIs or IMBHs
 """
 import math
 import numpy as np
@@ -293,6 +293,38 @@ class Likelihoods:
         self.flatchain = emcee_sampler.flatchain
         return emcee_sampler
 
+class SN1AGWB:
+    """Model for the supernovae 1a background following 1511.02542."""
+    def __init__(self):
+        self.ureg = ureg
+        self.Normunit = 1*self.ureg("Gpc^-3/year")
+        self.cc = (self.ureg("speed_of_light").to("m/s")).magnitude
+        self.GG = ((1*self.ureg.newtonian_constant_of_gravitation).to_base_units()).magnitude
+        #Solar mass
+        self.ms = 1.989e30 #* self.ureg("kg"))
+
+    def rhocrit(self):
+        """Critical energy density at z=0 in kg/m^3"""
+        rhoc = 3 * (67.9 * self.ureg('km/s/Mpc'))**2
+        return rhoc / 8 / math.pi/ self.ureg.newtonian_constant_of_gravitation
+
+    def dEdfstot(self, femit, mu = 0.41):
+        """Total energy per unit strain. Fit by eye to figure 5 of 1511.02542. In units of 1e39 erg/Hz"""
+        sigma = mu / 2.
+        return 4.8*np.exp(-(femit - mu)**2/sigma**2) + 2*np.exp(-(femit - math.pi*mu)**2/(2*sigma)**2)
+
+    def OmegaGW(self, freq, Norm=56., mu=0.41):
+        """OmegaGW as a function of frequency. Normalization is in units of mergers per Gpc^3 per year.
+        Normalisation units are arbitrary right now."""
+        Hub = 67.9 * self.ureg("km/s/Mpc")
+        #See eq. 2 of 1609.03565
+        freq = freq * self.ureg("Hz")
+        normfac = (Norm * self.Normunit / Hub * freq / self.ureg("speed_of_light")**2 / self.rhocrit())
+        normfac = normfac.to_base_units()
+        #assert normfac.check("[]")
+        return  normfac.magnitude * self.dEdfstot(freq, mu=mu)
+
+
 class BinaryBHGWB:
     """Model for the binary black hole background, fiducial version from LIGO."""
     def __init__(self):
@@ -538,7 +570,10 @@ class PhaseTransition:
 
     For sound waves: for fixed overall energy scale, if alpha inc then Ts dec  and cRs inc. alpha: strength of the PT.
 
-    GW from turbulence: important if SW period is much shorter than 1 Hubble time, corresponds to plasma entering non-linear regime after oscillation (SW) period. Decreasing cRs->increasing turbulance contribution relative to SW."""
+    GW from turbulence: important if SW period is much shorter than 1 Hubble time, corresponds to plasma entering non-linear regime after oscillation (SW) period. Decreasing cRs->increasing turbulance contribution relative to SW.
+
+    alpha from 0.01 to 30?
+    """
     def __init__(self):
         #See 1004.4187 for vw != 1
         self.vw = 1
@@ -620,6 +655,12 @@ class PhaseTransition:
         fss = self.fss(fs, Ts, Trh)
         omegatbs = self.OmegaTBs(fss, cRs, Ts, alpha)
         return 1.67e-5 * self.h2 * (100 / gcorr(Trh))**(1./3) * omegatbs
+
+    def OmegaGW(self, f, Ts, alpha):
+        """Total OmegaGW: this is just sound wave dropping the subdominant bubbles and turbulence following 1910.13125."""
+        #Eyeballing the right panel of Figure 17 of 1809.08242 gives alpha = (10 R_*)^0.8
+        cRs = alpha**(1/0.8) / 10.
+        return self.OmegaSW0(f, cRs, Ts, alpha)
 
 def test_cs():
     """Simple test routine to check the cosmic string model matches the notebook"""
