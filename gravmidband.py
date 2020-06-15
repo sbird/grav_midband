@@ -298,6 +298,8 @@ class SN1AGWB:
     def __init__(self):
         self.ureg = ureg
         self.Normunit = 1*self.ureg("Gpc^-3/year")
+        #1308.0137 gives the rate of SN1A at 10^{-4} / yr/ Mpc^{-3}, which is
+        #10^{5} / yr/ Gpc^{-3}
         self.cc = (self.ureg("speed_of_light").to("m/s")).magnitude
         self.GG = ((1*self.ureg.newtonian_constant_of_gravitation).to_base_units()).magnitude
         #Solar mass
@@ -313,7 +315,7 @@ class SN1AGWB:
         sigma = mu / 2.
         return 4.8*np.exp(-(femit - mu)**2/sigma**2) + 2*np.exp(-(femit - math.pi*mu)**2/(2*sigma)**2)
 
-    def OmegaGW(self, freq, Norm=56., mu=0.41):
+    def OmegaGW(self, freq, Norm=1e5., mu=0.41):
         """OmegaGW as a function of frequency. Normalization is in units of mergers per Gpc^3 per year.
         Normalisation units are arbitrary right now."""
         Hub = 67.9 * self.ureg("km/s/Mpc")
@@ -749,17 +751,18 @@ def test_cs():
 
 if __name__=="__main__":
     #LISA only
-    like = Likelihoods(nsamples=400, imri=False, strings=True, binaries=True, ligo = True, sn=True, satellites="lisa")
+    like = Likelihoods(nsamples=400, imri=True, strings=True, binaries=True, ligo = True, satellites="lisa")
     like.do_sampling(savefile = "samples_ligo_lisa_string_bbh.txt")
-    #LISA only with phase transition
-    like = Likelihoods(nsamples=400, imri=False, phase=True, strings=True, binaries=True, ligo = True, sn=True, satellites="lisa")
-    like.do_sampling(savefile = "samples_ligo_lisa_string_phase_bbh.txt")
     #LISA + TianGo
-    like = Likelihoods(nsamples=400, imri=False, phase=True, strings=True, binaries=True, ligo = True, sn=True, satellites=("lisa","tiango"))
+    like = Likelihoods(nsamples=400, imri=True, strings=True, binaries=True, ligo = True, satellites=("lisa","tiango"))
     like.do_sampling(savefile = "samples_ligo_lisa_tiango_string_phase_bbh_imri.txt")
-    #LISA + TianGo + IMRI background
-    like = Likelihoods(nsamples=400, imri=True, phase=True, strings=True, binaries=True, ligo = True, satellites=("lisa","tiango"))
-    like.do_sampling(savefile = "samples_ligo_lisa_tiango_string_bbh_imri.txt")
     #LISA + DECIGO
-    #like = Likelihoods(nsamples=400, imri=False, strings=True, binaries=True, ligo = True, sn=True, satellites=("lisa","decigo"))
+    like = Likelihoods(nsamples=400, imri=True, strings=True, binaries=True, ligo = True, satellites=("lisa","decigo"))
+    #LISA only with phase transition
+    like = Likelihoods(nsamples=400, imri=True, phase=True, strings=False, binaries=True, ligo = True, satellites="lisa")
+    like.do_sampling(savefile = "samples_ligo_lisa_phase_bbh.txt")
+    #LISA+TianGo with phase transition
+    like = Likelihoods(nsamples=400, imri=True, phase=True, strings=False, binaries=True, ligo = True, satellites="lisa")
+    like.do_sampling(savefile = "samples_ligo_lisa_phase_bbh.txt")
+
     #like.do_sampling(savefile = "samples_ligo_lisa_decigo_string_bbh.txt")
