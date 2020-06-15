@@ -318,11 +318,12 @@ class SN1AGWB:
         Normalisation units are arbitrary right now."""
         Hub = 67.9 * self.ureg("km/s/Mpc")
         #See eq. 2 of 1609.03565
+        dE = self.dEdfstot(freq, mu=mu)
         freq = freq * self.ureg("Hz")
         normfac = (Norm * self.Normunit / Hub * freq / self.ureg("speed_of_light")**2 / self.rhocrit())
         normfac = normfac.to_base_units()
         #assert normfac.check("[]")
-        return  normfac.magnitude * self.dEdfstot(freq, mu=mu)
+        return  normfac.magnitude * dE
 
 
 class BinaryBHGWB:
@@ -407,10 +408,10 @@ class BinaryBHGWB:
 
     def _omegagwz(self, ff, alpha=-2.3):
         """Integrand as a function of redshift, taking care of the redshifting factors."""
-        #From z= 0.01 to 10.
-        zmax = 20
+        #From z= 0.01 to 20.
+        zmax = 10
         omz = lambda zzp1 : self.Rsfrnormless(zzp1) / HubbleEz(zzp1) * self.dEdfstot(ff*zzp1, alpha=alpha)
-        omegagwz, _ = scipy.integrate.quad(omz, 1, zmax, limit=100)
+        omegagwz, _ = scipy.integrate.quad(omz, 1, zmax, limit=200)
         return omegagwz
 
     def OmegaGW(self, freq, Norm=56., alpha=-2.3):
@@ -423,6 +424,75 @@ class BinaryBHGWB:
         normfac = normfac.to_base_units()
         #assert normfac.check("[]")
         return  normfac.magnitude * omegagw_unnormed
+
+class EMRIGWB(BinaryBHGWB):
+    """Subclasses the Binary BH model for EMRIs. Currently assumes that
+    the emission frequencies of the phases are as for the normal binaries (which is not totally true)."""
+    def dEdfstot(self, femit, alpha=-2.3, beta=-1.):
+        """Total energy per unit strain in all phases. The idea here is that m1
+           follows the normal mass distribution for stellar mass black holes
+           and m2 follows a power law for SMBHs from TNG."""
+        nsamp = 100
+        um = 50
+        m1 = np.linspace(5, um, nsamp)
+        weights = m1**alpha
+        weight = np.trapz(y=weights, x=m1)*(um-5)
+        m2 = np.linspace(2e6, 1e10, nsamp)
+        ii = np.where(m2 > 1e8)
+        weights2 = np.ones_like(m2)
+        weights2[ii] = (m2[ii]/1e8)**beta
+        weight2 = np.trapz(y=weights2, x=m2)*(1e10-2e6)
+        m1rep = np.repeat(m1, nsamp)
+        m2rep = np.tile(m2, nsamp)
+        fmerg = self.fmergerV2(m1rep + m2rep)
+        fqnr = self.fqnrV2(m1rep + m2rep)
+        weights = np.repeat(weights, nsamp)
+        w2rep = np.tile(weights2, nsamp)
+        weights += w2rep
+        weights /= (weight * weight2)
+        ii = np.where(femit > fqnr)
+        weights[ii] = 0
+        ii = np.where((femit < fqnr)*(femit > fmerg))
+        weights[ii] *= self.dEdfsMergV2(m1rep[ii], m2rep[ii], femit)
+        ii = np.where(femit < fmerg)
+        weights[ii] *= self.dEdfsInsp(m1rep[ii], m2rep[ii], femit)
+        return np.trapz([np.trapz(weights[i:i+nsamp], m2) for i in range(nsamp)], m1)
+
+    def OmegaGW(self, freq, Norm=1., alpha=-2.3, beta=-1):
+        """OmegaGW as a function of frequency. Normalization is in units of mergers per Gpc^3 per year."""
+        return super().OmegaGW(freq, Norm=Norm, alpha = alpha)
+
+
+class IMRIGWB(BinaryBHGWB):
+    """Subclasses the Binary BH model for IMRIs. Currently assumes that
+    the emission frequencies of the phases are as for the normal binaries (which is not totally true)."""
+    def dEdfstot(self, femit, alpha=-2.3):
+        """Total energy per unit strain in all phases. The idea here is that m1
+           follows the normal mass distribution for stellar mass black holes
+           and is uniform."""
+        nsamp = 100
+        um = 50
+        m1 = np.linspace(5, um, nsamp)
+        weights = m1**alpha
+        weight = np.trapz(y=weights, x=m1)*(um-5)
+        m2 = np.linspace(1e2, 1e4, nsamp)
+        m1rep = np.repeat(m1, nsamp)
+        m2rep = np.tile(m2, nsamp)
+        fmerg = self.fmergerV2(m1rep + m2rep)
+        fqnr = self.fqnrV2(m1rep + m2rep)
+        weights = np.repeat(weights, nsamp)
+        weights /= weight
+        ii = np.where(femit > fqnr)
+        weights[ii] = 0
+        ii = np.where((femit < fqnr)*(femit > fmerg))
+        weights[ii] *= self.dEdfsMergV2(m1rep[ii], m2rep[ii], femit)
+        ii = np.where(femit < fmerg)
+        weights[ii] *= self.dEdfsInsp(m1rep[ii], m2rep[ii], femit)
+        return np.trapz([np.trapz(weights[i:i+nsamp], m2) for i in range(nsamp)], m1)
+
+    def OmegaGW(self, freq, Norm=0.01, alpha=-2.3):
+        """OmegaGW as a function of frequency. Normalization is in units of mergers per Gpc^3 per year."""
+        return super().OmegaGW(freq, Norm=Norm, alpha = alpha)
 
 def gcorr(x):
     """Corrections to radiation density from freezeout"""
@@ -555,7 +625,7 @@ class CosmicStringGWB:
         #Add extra bins to extend the table to high k, low frequency
         lnewlf = np.log10(freq[0]/31)
         lnewhf = np.log10(freq[-1]*1.02)
-        nsamp = (lnewhf - lnewlf) * 6
+        nsamp = int((lnewhf - lnewlf) * 6)
         fextended = np.logspace(lnewlf, lnewhf, nsamp)
         omegagmk1 = np.array([self.OmegaGWMk(Gmu, ff, 1) for ff in fextended])
         omintp = scipy.interpolate.interp1d(np.log(fextended), np.log(omegagmk1))
@@ -678,5 +748,18 @@ def test_cs():
 
 
 if __name__=="__main__":
-    like = Likelihoods(nsamples=400, strings=True, binaries=True, ligo = True, satellites="lisa")
+    #LISA only
+    like = Likelihoods(nsamples=400, imri=False, strings=True, binaries=True, ligo = True, sn=True, satellites="lisa")
     like.do_sampling(savefile = "samples_ligo_lisa_string_bbh.txt")
+    #LISA only with phase transition
+    like = Likelihoods(nsamples=400, imri=False, phase=True, strings=True, binaries=True, ligo = True, sn=True, satellites="lisa")
+    like.do_sampling(savefile = "samples_ligo_lisa_string_phase_bbh.txt")
+    #LISA + TianGo
+    like = Likelihoods(nsamples=400, imri=False, phase=True, strings=True, binaries=True, ligo = True, sn=True, satellites=("lisa","tiango"))
+    like.do_sampling(savefile = "samples_ligo_lisa_tiango_string_phase_bbh_imri.txt")
+    #LISA + TianGo + IMRI background
+    like = Likelihoods(nsamples=400, imri=True, phase=True, strings=True, binaries=True, ligo = True, satellites=("lisa","tiango"))
+    like.do_sampling(savefile = "samples_ligo_lisa_tiango_string_bbh_imri.txt")
+    #LISA + DECIGO
+    #like = Likelihoods(nsamples=400, imri=False, strings=True, binaries=True, ligo = True, sn=True, satellites=("lisa","decigo"))
+    #like.do_sampling(savefile = "samples_ligo_lisa_decigo_string_bbh.txt")
