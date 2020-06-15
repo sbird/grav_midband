@@ -169,7 +169,7 @@ class LIGOSensitivity(Sensitivity):
 class SGWBExperiment:
     """Helper class to hold pre-computed parts of the experimental data,
        presenting a consistent interface for different experiments."""
-    def __init__(self, binarybh, cstring, sensitivity, trueparams, nsamples=400):
+    def __init__(self, binarybh, imribh, cstring, sensitivity, trueparams, nsamples=400):
         self.cstring = cstring
         self.sensitivity = sensitivity
         self.freq, self.psd = sensitivity.omegadens()
@@ -178,6 +178,10 @@ class SGWBExperiment:
         self.mockdata = self.cosmicstringmodel(trueparams[0])
         self.mockdata += self.bhbinarymerger(trueparams[1])
 
+        #Add bckgrnd from IMRI
+        if imribh is not None:
+            self.imri_singleamp = imribh.OmegaGW(self.freq, Norm = 1)
+            self.mockdata += self.imri_singleamp * trueparams[2]
 
     def downsample(self, nsamples, freq, psd):
         """Down-sample a sensitivity curve to a lower desired number of bins."""
@@ -205,17 +209,18 @@ class SGWBExperiment:
         https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.116.131102"""
         return amp * self.bbh_singleamp
 
-    def omegamodel(self, Gmu, bbhamp):
-        """Construct a model with two free parameters,
-           combining multiple SGWB sources."""
+    def omegamodel(self, Gmu, bbhamp, imriamp=0):
+        """Construct a model with three free parameters,
+           combining multiple SGWB sources:
+           Strings, BBH (LIGO) and BBH (IMRI)."""
         #wdgwb = self.whitedwarfmodel(self.freq, wdnumber)
-        return self.cosmicstringmodel(Gmu) + self.bhbinarymerger(bbhamp)
+        return self.cosmicstringmodel(Gmu) + self.bhbinarymerger(bbhamp) + imriamp * self.imri_singleamp
 
 class Likelihoods:
     """Class to perform likelihood analysis on SGWB.
     Args:
     """
-    def __init__(self, nsamples=400, strings=True, binaries=True, ligo = True, satellites="lisa"):
+    def __init__(self, nsamples=400, strings=True, binaries=True, imri = True, phase = True, ligo = True, satellites="lisa"):
         self.ureg = ureg
         self.strings = strings
         self.binaries = binaries
@@ -223,8 +228,13 @@ class Likelihoods:
         self.cstring = CosmicStringGWB()
         self.binarybh = BinaryBHGWB()
 
+        self.imri = None
+        if imri:
+            self.imribh = IMRIGWB()
+
         if isinstance(satellites, str):
             satellites = (satellites,)
+
 
         self.sensitivities = []
         if ligo:
@@ -233,8 +243,8 @@ class Likelihoods:
             self.sensitivities += [SatelliteSensitivity(satellite = sat) for sat in satellites]
 
         #This is the "true" model we are trying to detect: no cosmic strings, LIGO current best fit merger rate.
-        self.trueparams = [0, 56.]
-        self.experiments = [SGWBExperiment(self.binarybh, self.cstring, sens, self.trueparams, nsamples=nsamples) for sens in self.sensitivities]
+        self.trueparams = [0, 56., 0.01]
+        self.experiments = [SGWBExperiment(self.binarybh, self.imribh, self.cstring, sens, self.trueparams, nsamples=nsamples) for sens in self.sensitivities]
 
         #Expected number of ligo detections at time of LISA launch for the BBH amplitude prior.
         self.nligo = 1000
@@ -243,10 +253,13 @@ class Likelihoods:
         """Likelihood parameters:
         0 - cosmic string tension
         1 - BH binary merger rate amplitude
+        2 - IMRI merger rate amplitude
         """
         #Priors: positive BBH merger rate
         if params[1] < 0:
             return -np.inf
+        if params[2] < 0:
+            return - np.inf
         #CS string tension limit from EPTA
         if params[0] > np.log(2.e-11):
             return -np.inf
@@ -259,7 +272,7 @@ class Likelihoods:
         like = 0
 
         for exp in self.experiments:
-            model = exp.omegamodel(np.exp(params[0]), params[1])
+            model = exp.omegamodel(np.exp(params[0]), params[1], params[2])
             like += - 1 * np.trapz(((model - exp.mockdata)/ exp.psd)**2, x=exp.freq)
             like += ampprior * np.size(exp.freq)
         #print(np.exp(params[0]), like)
@@ -268,10 +281,10 @@ class Likelihoods:
     def do_sampling(self, savefile, nwalkers=100, burnin=300, nsamples = 300, while_loop=True, maxsample=200):
         """Do the sampling with emcee"""
         #Limits
-        #Say Gmu ranges from exp(-45) - exp(-14) and merger rate between 0 and 100.
-        pr = np.array([30, 100])
+        #Say Gmu ranges from exp(-45) - exp(-14), LIGO merger rate between 0 and 100 and IMRI rate from 0 to 1.
+        pr = np.array([30, 100, 1])
         #Priors are assumed to be in the middle.
-        cent = np.array([-30, 55])
+        cent = np.array([-30, 55, 0.05])
         p0 = [cent+2*pr/16.*np.random.rand(2)-pr/16. for _ in range(nwalkers)]
         assert np.all([np.isfinite(self.lnlikelihood(pp)) for pp in p0])
         emcee_sampler = emcee.EnsembleSampler(nwalkers, 2, self.lnlikelihood)
@@ -315,7 +328,7 @@ class SN1AGWB:
         sigma = mu / 2.
         return 4.8*np.exp(-(femit - mu)**2/sigma**2) + 2*np.exp(-(femit - math.pi*mu)**2/(2*sigma)**2)
 
-    def OmegaGW(self, freq, Norm=1e5., mu=0.41):
+    def OmegaGW(self, freq, Norm=1e5, mu=0.41):
         """OmegaGW as a function of frequency. Normalization is in units of mergers per Gpc^3 per year.
         Normalisation units are arbitrary right now."""
         Hub = 67.9 * self.ureg("km/s/Mpc")
@@ -459,11 +472,6 @@ class EMRIGWB(BinaryBHGWB):
         ii = np.where(femit < fmerg)
         weights[ii] *= self.dEdfsInsp(m1rep[ii], m2rep[ii], femit)
         return np.trapz([np.trapz(weights[i:i+nsamp], m2) for i in range(nsamp)], m1)
-
-    def OmegaGW(self, freq, Norm=1., alpha=-2.3, beta=-1):
-        """OmegaGW as a function of frequency. Normalization is in units of mergers per Gpc^3 per year."""
-        return super().OmegaGW(freq, Norm=Norm, alpha = alpha)
-
 
 class IMRIGWB(BinaryBHGWB):
     """Subclasses the Binary BH model for IMRIs. Currently assumes that
