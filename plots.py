@@ -32,6 +32,14 @@ def make_sgwb_plot():
     omegabbh = bbh.OmegaGW(freqs)
     plt.loglog(freqs, omegabbh, ":", color="red", label="Binary Black holes")
 
+    emri = gravmidband.EMRIGWB()
+    omegaemri = emri.OmegaGW(freqs)
+    plt.loglog(freqs, omegaemri, ":", color="gold", label="EMRI mergers")
+
+    imri = gravmidband.IMRIGWB()
+    omegaimri = imri.OmegaGW(freqs)
+    plt.loglog(freqs, omegaimri, ":", color="purple", label="IMRI mergers")
+
     plt.legend(loc="upper left")
     plt.xlabel("f (Hz)")
     plt.ylabel("$\Omega_{GW}$")
