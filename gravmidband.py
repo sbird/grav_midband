@@ -198,6 +198,9 @@ class SGWBExperiment:
         self.mockdata += self.bhbinarymerger(trueparams[1])
         self.phase = phase
 
+        if self.phase is not None and self.cstring is not None:
+            raise ValueError("Must use Cosmic strings or Phase Transition, not both")
+
         #Add bckgrnd from IMRI
         if imribh is not None:
             self.imri_singleamp = imribh.OmegaGW(self.freq, Norm = 1)
@@ -243,11 +246,16 @@ class SGWBExperiment:
         https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.116.131102"""
         return amp * self.bbh_singleamp
 
-    def omegamodel(self, Gmu, bbhamp, Ts, imriamp=0):
+    def omegamodel(self, cosmo, bbhamp, Ts, imriamp=0):
         """Construct a model with three free parameters,
            combining multiple SGWB sources:
            Strings, BBH (LIGO) and BBH (IMRI)."""
-        return self.cosmicstringmodel(Gmu) + self.imrimodel(imriamp) + self.bhbinarymerger(bbhamp) + self.phasemodel(Ts)
+        cos = 0
+        if self.cstring is not None:
+            cos = self.cosmicstringmodel(cosmo)
+        elif self.phase is not None:
+            cos = self.phasemodel(cosmo)
+        return cos + self.imrimodel(imriamp) + self.bhbinarymerger(bbhamp)
 
 class Likelihoods:
     """Class to perform likelihood analysis on SGWB.
@@ -264,6 +272,9 @@ class Likelihoods:
         self.phase = None
         if phase:
             self.phase = PhaseTransition()
+
+        if self.phase is not None and self.cstring is not None:
+            raise ValueError("Must use Cosmic strings or Phase Transition, not both")
 
         self.imri = None
         if imri:
