@@ -201,6 +201,7 @@ class SGWBExperiment:
         if self.phase is not None and self.cstring is not None:
             raise ValueError("Must use Cosmic strings or Phase Transition, not both")
 
+        self.imri_singleamp = 0
         #Add bckgrnd from IMRI
         if imribh is not None:
             self.imri_singleamp = imribh.OmegaGW(self.freq, Norm = 1)
@@ -228,7 +229,7 @@ class SGWBExperiment:
 
     def imrimodel(self, amp):
         """IMRI model"""
-        if amp < 0 or imribh is None:
+        if amp < 0:
             return 0
         return amp * self.imri_singleamp
 
@@ -246,7 +247,7 @@ class SGWBExperiment:
         https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.116.131102"""
         return amp * self.bbh_singleamp
 
-    def omegamodel(self, cosmo, bbhamp, Ts, imriamp=0):
+    def omegamodel(self, cosmo, bbhamp, imriamp=0):
         """Construct a model with three free parameters,
            combining multiple SGWB sources:
            Strings, BBH (LIGO) and BBH (IMRI)."""
@@ -263,7 +264,6 @@ class Likelihoods:
     """
     def __init__(self, nsamples=400, strings=True, phase = False, imri = True, ligo = True, satellites="lisa"):
         self.ureg = ureg
-        self.binaries = binaries
         self.binarybh = BinaryBHGWB()
 
         self.cstring = None
@@ -318,14 +318,14 @@ class Likelihoods:
         # at a different rate to the low redshift ones and so we should allow a free amplitude
         # ampprior = -1 * (params[1] - self.trueparams[1])**2 / self.nligo
 
-        like = 0
+        llike = 0
 
         for exp in self.experiments:
             model = exp.omegamodel(Gmu = np.exp(params[0]), bbhamp = params[1], imriamp = params[2])
-            like += - 1 * np.trapz(((model - exp.mockdata)/ exp.psd)**2, x=exp.freq)
+            llike += - 1 * np.trapz(((model - exp.mockdata)/ exp.psd)**2, x=exp.freq)
             #like += ampprior * np.size(exp.freq)
         #print(np.exp(params[0]), like)
-        return like
+        return llike
 
     def do_sampling(self, savefile, nwalkers=100, burnin=300, nsamples = 300, while_loop=True, maxsample=200):
         """Do the sampling with emcee"""
@@ -437,16 +437,30 @@ class BinaryBHGWB:
 
     def dEdfsMergV2(self, m1, m2, femit):
         """Energy per unit strain in merger phase"""
-        return 1./3.*(math.pi**2*self.GG**2)**(1/3)*((m1*m2)*self.ms**(5./3)/(m1 + m2)**(1/3))*femit**(2./3)/self.fmergerV2(m1 + m2)
+        mchirp = m1*m2 / (m1+m2)**(1/3)
+        return 1./3.*(math.pi**2*self.GG**2)**(1/3)*(self.ms**(5./3)*mchirp)*femit**(2./3)/self.fmergerV2(m1 + m2)
 
-    def dEdfsInsp(self, m1, m2, femit):
-        """Energy per unit strain in inspiral phase"""
-        return 1./3.*(math.pi**2*self.GG**2/femit)**(1/3)*self.ms**(5./3)*((m1*m2)/((m1 + m2))**(1/3))
+    def dEdfsInsp(self, mchirp, femit):
+        """Energy per unit strain in inspiral phase. mchirp should be m1*m2 / (m1+m2)**(1/3)
+        (note this is Mchirp^{5/3}: Mchirp = (m1 m2)^{3/5} / (m1+m2)^{1/5})"""
+        return 1./3.*(math.pi**2*self.GG**2/femit)**(1/3)*self.ms**(5./3)*mchirp
 
     def fqnrV2(self, msum):
         """Ringdown phase frequency."""
         fqnr = 0.915*(self.cc**3*(1. - 0.63*(1. - 0.67)**(3/10.)))/(2*math.pi*self.GG*msum*self.ms)
         return fqnr
+
+    def dEdfs(self, femit, m1, m2):
+        """Energy per unit strain for a single merger"""
+        fmerg = self.fmergerV2(m1+m2)
+        fqnr = self.fqnrV2(m1+m2)
+        if femit > fqnr:
+            return 0
+        if femit > fmerg:
+            return self.dEdfsMergV2(m1, m2, femit)
+        #femit < fmerg
+        mchirp = (m1*m2)/(m1+m2)**(1./3)
+        return self.dEdfsInsp(mchirp, femit)
 
     def dEdfstot(self, femit, alpha=-2.3):
         """Total energy per unit strain in all phases.
@@ -467,7 +481,8 @@ class BinaryBHGWB:
         ii = np.where((femit < fqnr)*(femit > fmerg))
         weights[ii] *= self.dEdfsMergV2(m1rep[ii], m2rep[ii], femit)
         ii = np.where(femit < fmerg)
-        weights[ii] *= self.dEdfsInsp(m1rep[ii], m2rep[ii], femit)
+        mchirp = (m1rep[ii]*m2rep[ii])/(m1rep[ii]+m2rep[ii])**(1./3)
+        weights[ii] *= self.dEdfsInsp(mchirp, femit)
         return np.trapz([np.trapz(weights[i:i+nsamp], m2) for i in range(nsamp)], m1)
 
     def _omegagwz(self, ff, alpha=-2.3):
@@ -519,7 +534,8 @@ class EMRIGWB(BinaryBHGWB):
         ii = np.where((femit < fqnr)*(femit > fmerg))
         weights[ii] *= self.dEdfsMergV2(m1rep[ii], m2rep[ii], femit)
         ii = np.where(femit < fmerg)
-        weights[ii] *= self.dEdfsInsp(m1rep[ii], m2rep[ii], femit)
+        mchirp = (m1rep[ii]*m2rep[ii])/(m1rep[ii]+m2rep[ii])**(1./3)
+        weights[ii] *= self.dEdfsInsp(mchirp, femit)
         return np.trapz([np.trapz(weights[i:i+nsamp], m2) for i in range(nsamp)], m1)
 
 class IMRIGWB(BinaryBHGWB):
@@ -546,7 +562,8 @@ class IMRIGWB(BinaryBHGWB):
         ii = np.where((femit < fqnr)*(femit > fmerg))
         weights[ii] *= self.dEdfsMergV2(m1rep[ii], m2rep[ii], femit)
         ii = np.where(femit < fmerg)
-        weights[ii] *= self.dEdfsInsp(m1rep[ii], m2rep[ii], femit)
+        mchirp = (m1rep[ii]*m2rep[ii])/(m1rep[ii]+m2rep[ii])**(1./3)
+        weights[ii] *= self.dEdfsInsp(mchirp, femit)
         return np.trapz([np.trapz(weights[i:i+nsamp], m2) for i in range(nsamp)], m1)
 
     def OmegaGW(self, freq, Norm=0.01, alpha=-2.3):
@@ -810,19 +827,19 @@ def test_cs():
 
 if __name__=="__main__":
     #LISA only
-    like = Likelihoods(nsamples=400, imri=True, strings=True, binaries=True, ligo = True, satellites="lisa")
+    like = Likelihoods(nsamples=400, imri=True, strings=True, ligo = True, satellites="lisa")
     like.do_sampling(savefile = "samples_ligo_lisa_string_bbh.txt")
     #LISA + DECIGO
-    like = Likelihoods(nsamples=400, imri=True, strings=True, binaries=True, ligo = True, satellites=("lisa","decigo"))
+    like = Likelihoods(nsamples=400, imri=True, strings=True, ligo = True, satellites=("lisa","decigo"))
     #LISA + TianGo
-    like = Likelihoods(nsamples=400, imri=True, strings=True, binaries=True, ligo = True, satellites=("lisa","tiango"))
+    like = Likelihoods(nsamples=400, imri=True, strings=True, ligo = True, satellites=("lisa","tiango"))
     like.do_sampling(savefile = "samples_ligo_lisa_tiango_string_phase_bbh_imri.txt")
 
     #LISA only with phase transition
-    like = Likelihoods(nsamples=400, imri=True, phase=True, strings=False, binaries=True, ligo = True, satellites="lisa")
+    like = Likelihoods(nsamples=400, imri=True, phase=True, strings=False, ligo = True, satellites="lisa")
     like.do_sampling(savefile = "samples_ligo_lisa_phase_bbh.txt")
     #LISA+TianGo with phase transition
-    like = Likelihoods(nsamples=400, imri=True, phase=True, strings=False, binaries=True, ligo = True, satellites="lisa")
+    like = Likelihoods(nsamples=400, imri=True, phase=True, strings=False, ligo = True, satellites="lisa")
     like.do_sampling(savefile = "samples_ligo_lisa_phase_bbh.txt")
 
     #like.do_sampling(savefile = "samples_ligo_lisa_decigo_string_bbh.txt")
