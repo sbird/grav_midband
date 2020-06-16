@@ -285,15 +285,17 @@ class Likelihoods:
         #Prevent underflow
         if params[0] < -80:
             return -np.inf
-        #LIGO prior: Gaussian on BBH merger rate with central value of the true value.
-        ampprior = -1 * (params[1] - self.trueparams[1])**2 / self.nligo
+        # LIGO prior: Gaussian on BBH merger rate with central value of the true value.
+        # Remove this: it may be that the unresolved high redshift binaries merge
+        # at a different rate to the low redshift ones and so we should allow a free amplitude
+        # ampprior = -1 * (params[1] - self.trueparams[1])**2 / self.nligo
 
         like = 0
 
         for exp in self.experiments:
             model = exp.omegamodel(np.exp(params[0]), params[1], params[2])
             like += - 1 * np.trapz(((model - exp.mockdata)/ exp.psd)**2, x=exp.freq)
-            like += ampprior * np.size(exp.freq)
+            #like += ampprior * np.size(exp.freq)
         #print(np.exp(params[0]), like)
         return like
 
