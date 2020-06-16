@@ -94,14 +94,31 @@ class SatelliteSensitivity(Sensitivity):
         self.length = 4 * 3.154e7
         #Speed of light in m/s
         self.light = 299792458
+        self.extdata = None
         if satellite == "lisa":
             self.satfreq = np.logspace(np.log10(1.95e-7), np.log10(2.08), 400)
-            # The satellite arm length
+            # The satellite arm length in m
             self.L0 = 2.5e9
-            #The acceleration noise
+            #The acceleration noise in m^2 /Hz
             self.Sa = 3.e-15**2
-            #The position noise
+            #The position noise in m^2 /Hz
             self.Sx = 1.5e-11**2
+        elif satellite == "tiango":
+            #From Hang Yu, 6/15/20
+            #Arm length: 100 km
+            #Laser power: 5 W
+            #Laser wavelength: 532 nm
+            #Mirror mass: 10 kg
+            #Freq-independent squeezing: 10 dB.
+            #So the shot noise is about 1.4e-22 [1/rtHz] and the
+            #quantum-radiation-pressure noise is ~ 2e-22 * ( f / 0.1 Hz)^{-2}.
+            #(Note the factor of L0 to match our units)
+            #The excess noise below 0.03 Hz is due to gravity gradient.
+            self.extdata = np.loadtxt("TianGOskyAvg.txt")
+            self.satfreq = np.logspace(-4, 4, 400)
+            self.L0 = 1e5
+            self.Sx = (2.e-22 * self.L0)**2
+            self.Sa = (1.4e-22 * self.L0)**2
         elif satellite == "tianqin":
             self.satfreq = np.logspace(-5, 1, 400)
             self.L0 = np.sqrt(3) * 1.e8
@@ -117,6 +134,8 @@ class SatelliteSensitivity(Sensitivity):
 
     def PSD(self):
         """Get the root power spectral density in Hz^[-1/2]"""
+        if self.extdata is not None:
+            return self.extdata[:,0], self.extdata[:,1]
         return self.satfreq, self.noisepsd(self.satfreq)
 
     def noisepsd(self, freq):
