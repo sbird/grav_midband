@@ -761,11 +761,12 @@ if __name__=="__main__":
     #LISA only
     like = Likelihoods(nsamples=400, imri=True, strings=True, binaries=True, ligo = True, satellites="lisa")
     like.do_sampling(savefile = "samples_ligo_lisa_string_bbh.txt")
+    #LISA + DECIGO
+    like = Likelihoods(nsamples=400, imri=True, strings=True, binaries=True, ligo = True, satellites=("lisa","decigo"))
     #LISA + TianGo
     like = Likelihoods(nsamples=400, imri=True, strings=True, binaries=True, ligo = True, satellites=("lisa","tiango"))
     like.do_sampling(savefile = "samples_ligo_lisa_tiango_string_phase_bbh_imri.txt")
-    #LISA + DECIGO
-    like = Likelihoods(nsamples=400, imri=True, strings=True, binaries=True, ligo = True, satellites=("lisa","decigo"))
+
     #LISA only with phase transition
     like = Likelihoods(nsamples=400, imri=True, phase=True, strings=False, binaries=True, ligo = True, satellites="lisa")
     like.do_sampling(savefile = "samples_ligo_lisa_phase_bbh.txt")
