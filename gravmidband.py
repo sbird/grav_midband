@@ -188,7 +188,7 @@ class LIGOSensitivity(Sensitivity):
 class SGWBExperiment:
     """Helper class to hold pre-computed parts of the experimental data,
        presenting a consistent interface for different experiments."""
-    def __init__(self, binarybh, imribh, cstring, sensitivity, trueparams, nsamples=400):
+    def __init__(self, binarybh, sensitivity, trueparams, imribh=None, cstring=None, phase = None, nsamples=400):
         self.cstring = cstring
         self.sensitivity = sensitivity
         self.freq, self.psd = sensitivity.omegadens()
@@ -196,6 +196,7 @@ class SGWBExperiment:
         self.bbh_singleamp = binarybh.OmegaGW(self.freq, Norm=1)
         self.mockdata = self.cosmicstringmodel(trueparams[0])
         self.mockdata += self.bhbinarymerger(trueparams[1])
+        self.phase = phase
 
         #Add bckgrnd from IMRI
         if imribh is not None:
@@ -212,7 +213,21 @@ class SGWBExperiment:
         """The cosmic string SGWB model."""
         if Gmu <= 0:
             return 0
+        if self.cstring is None:
+            return 0
         return self.cstring.OmegaGW(self.freq, Gmu)
+
+    def phasemodel(self, Gmu):
+        """The phase transition SGWB model."""
+        if self.phase is None:
+            return 0
+        return self.phase.OmegaGW(self.freq, Gmu)
+
+    def imrimodel(self, amp):
+        """IMRI model"""
+        if amp < 0 or imribh is None:
+            return 0
+        return amp * self.imri_singleamp
 
     def whitedwarfmodel(self, number):
         """The white dwarf background model.
@@ -228,24 +243,27 @@ class SGWBExperiment:
         https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.116.131102"""
         return amp * self.bbh_singleamp
 
-    def omegamodel(self, Gmu, bbhamp, imriamp=0):
+    def omegamodel(self, Gmu, bbhamp, Ts, imriamp=0):
         """Construct a model with three free parameters,
            combining multiple SGWB sources:
            Strings, BBH (LIGO) and BBH (IMRI)."""
-        #wdgwb = self.whitedwarfmodel(self.freq, wdnumber)
-        return self.cosmicstringmodel(Gmu) + self.bhbinarymerger(bbhamp) + imriamp * self.imri_singleamp
+        return self.cosmicstringmodel(Gmu) + self.imrimodel(imriamp) + self.bhbinarymerger(bbhamp) + self.phasemodel(Ts)
 
 class Likelihoods:
     """Class to perform likelihood analysis on SGWB.
     Args:
     """
-    def __init__(self, nsamples=400, strings=True, binaries=True, imri = True, phase = True, ligo = True, satellites="lisa"):
+    def __init__(self, nsamples=400, strings=True, phase = False, imri = True, ligo = True, satellites="lisa"):
         self.ureg = ureg
-        self.strings = strings
         self.binaries = binaries
-
-        self.cstring = CosmicStringGWB()
         self.binarybh = BinaryBHGWB()
+
+        self.cstring = None
+        if strings:
+            self.cstring = CosmicStringGWB()
+        self.phase = None
+        if phase:
+            self.phase = PhaseTransition()
 
         self.imri = None
         if imri:
@@ -253,7 +271,6 @@ class Likelihoods:
 
         if isinstance(satellites, str):
             satellites = (satellites,)
-
 
         self.sensitivities = []
         if ligo:
@@ -263,7 +280,7 @@ class Likelihoods:
 
         #This is the "true" model we are trying to detect: no cosmic strings, LIGO current best fit merger rate.
         self.trueparams = [0, 56., 0.01]
-        self.experiments = [SGWBExperiment(self.binarybh, self.imribh, self.cstring, sens, self.trueparams, nsamples=nsamples) for sens in self.sensitivities]
+        self.experiments = [SGWBExperiment(binarybh = self.binarybh, imribh = self.imribh, phase = self.phase, cstring = self.cstring, sensitivity = sens, trueparams = self.trueparams, nsamples=nsamples) for sens in self.sensitivities]
 
         #Expected number of ligo detections at time of LISA launch for the BBH amplitude prior.
         self.nligo = 1000
@@ -293,7 +310,7 @@ class Likelihoods:
         like = 0
 
         for exp in self.experiments:
-            model = exp.omegamodel(np.exp(params[0]), params[1], params[2])
+            model = exp.omegamodel(Gmu = np.exp(params[0]), bbhamp = params[1], imriamp = params[2])
             like += - 1 * np.trapz(((model - exp.mockdata)/ exp.psd)**2, x=exp.freq)
             #like += ampprior * np.size(exp.freq)
         #print(np.exp(params[0]), like)
@@ -757,8 +774,10 @@ class PhaseTransition:
         omegatbs = self.OmegaTBs(fss, cRs, Ts, alpha)
         return 1.67e-5 * self.h2 * (100 / gcorr(Trh))**(1./3) * omegatbs
 
-    def OmegaGW(self, f, Ts, alpha):
-        """Total OmegaGW: this is just sound wave dropping the subdominant bubbles and turbulence following 1910.13125."""
+    def OmegaGW(self, f, Ts, alpha=1):
+        """Total OmegaGW: this is just sound wave dropping the subdominant bubbles and turbulence following 1910.13125.
+        We pick alpha = 1 as a fiducial model. It can be from 0.5 to 4 ish.
+        Ts is in GeV and can have a variety of values."""
         #Eyeballing the right panel of Figure 17 of 1809.08242 gives alpha = (10 R_*)^0.8
         cRs = alpha**(1/0.8) / 10.
         return self.OmegaSW0(f, cRs, Ts, alpha)
