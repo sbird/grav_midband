@@ -36,7 +36,7 @@ def make_sgwb_plot():
     #plt.loglog(saff, sapo, "-", color="green", label="LISA")
     plt.loglog(goff, gopo, "-", color="black", label="LIGO")
 
-    for sat in ("lisa", "tianqin", "bdecigo"):
+    for sat in ("lisa", "tianqin", "tiango", "bdecigo"):
         ss = gravmidband.SatelliteSensitivity(satellite = sat)
         sff, spo = ss.omegadens()
         plt.loglog(sff, spo, "--", label=sat)
@@ -44,7 +44,7 @@ def make_sgwb_plot():
     freqs = np.logspace(-7, 4, 200)
 
     csgw = gravmidband.CosmicStringGWB()
-    omegacs = csgw.OmegaGW(freqs, 1.e-12)
+    omegacs = csgw.OmegaGW(freqs, 1.e-14)
     plt.loglog(freqs, omegacs, "-.", color="blue", label="CS: $G\mu = 10^{-12}$")
 
     bbh = gravmidband.BinaryBHGWB()
