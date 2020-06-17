@@ -435,9 +435,14 @@ class BinaryBHGWB:
         fmerg = 0.04*self.cc**3/(self.GG*msum* self.ms)
         return fmerg #.to("Hz")
 
+    def mchirp(self, m1, m2):
+        """Power of the chirp mass. Should be m1*m2 / (m1+m2)**(1/3)
+        (note this is Mchirp^{5/3}: Mchirp = (m1 m2)^{3/5} / (m1+m2)^{1/5})"""
+        return m1*m2 / (m1+m2)**(1/3)
+
     def dEdfsMergV2(self, m1, m2, femit):
         """Energy per unit strain in merger phase"""
-        mchirp = m1*m2 / (m1+m2)**(1/3)
+        mchirp = self.mchirp(m1, m2)
         return 1./3.*(math.pi**2*self.GG**2)**(1/3)*(self.ms**(5./3)*mchirp)*femit**(2./3)/self.fmergerV2(m1 + m2)
 
     def dEdfsInsp(self, mchirp, femit):
@@ -459,44 +464,35 @@ class BinaryBHGWB:
         if femit > fmerg:
             return self.dEdfsMergV2(m1, m2, femit)
         #femit < fmerg
-        mchirp = (m1*m2)/(m1+m2)**(1./3)
+        mchirp = self.mchirp(m1, m2)
         return self.dEdfsInsp(mchirp, femit)
 
-    def dEdfstot(self, femit, alpha=-2.3):
-        """Total energy per unit strain in all phases.
-           This is computed with a weighted sum of a power law, following 1903.02886."""
-        nsamp = 100
-        m1 = np.linspace(5, 50, nsamp)
-        weights = m1**alpha
-        weight = np.trapz(y=weights, x=m1)*(50-5)
-        #Uniform distribution given first mass.
-        m2 = np.linspace(5, 50, nsamp)
-        m1rep = np.repeat(m1, nsamp)
-        m2rep = np.tile(m2, nsamp)
-        fmerg = self.fmergerV2(m1rep + m2rep)
-        fqnr = self.fqnrV2(m1rep + m2rep)
-        weights = np.repeat(weights, nsamp) / weight
-        ii = np.where(femit > fqnr)
-        weights[ii] = 0
-        ii = np.where((femit < fqnr)*(femit > fmerg))
-        weights[ii] *= self.dEdfsMergV2(m1rep[ii], m2rep[ii], femit)
-        ii = np.where(femit < fmerg)
-        mchirp = (m1rep[ii]*m2rep[ii])/(m1rep[ii]+m2rep[ii])**(1./3)
-        weights[ii] *= self.dEdfsInsp(mchirp, femit)
-        return np.trapz([np.trapz(weights[i:i+nsamp], m2) for i in range(nsamp)], m1)
-
-    def _omegagwz(self, ff, alpha=-2.3):
-        """Integrand as a function of redshift, taking care of the redshifting factors."""
+    def _omegagwz(self, ff, alpha=-2.3, m2min=5, m2max=50):
+        """Integrand as a function of redshift, taking care of the redshifting factors.
+        For numerical reasons, we split this into two segments, one for mergers, one for inspirals.
+        """
         #From z= 0.01 to 20.
-        zmax = 10
-        omz = lambda zzp1 : self.Rsfrnormless(zzp1) / HubbleEz(zzp1) * self.dEdfstot(ff*zzp1, alpha=alpha)
-        omegagwz, _ = scipy.integrate.quad(omz, 1, zmax, limit=200)
-        return omegagwz
+        zmax = 15
+        #m1 has a power law weight. m2 is uniformly sampled.
+        scalefac = lambda zzp1, m2, m1 : self.Rsfrnormless(zzp1) / HubbleEz(zzp1) * m1**alpha * self.mchirp(m1, m2)
+        ominsp = lambda zzp1, m2, m1 : scalefac(zzp1, m2, m1) * self.dEdfsInsp(self.mchirp(m1, m2), ff*zzp1)
+        ommerg = lambda zzp1, m2, m1 : scalefac(zzp1, m2, m1) * self.dEdfsMergV2(m1, m2, ff*zzp1)
+        #Constant limits for m2.
+        _m2max = lambda m1 : m2max
+        _m2min = lambda m1 : m2min
+        #Limits for z+1: lower limit is 1, upper depends on f.
+        zp1merge = lambda m1, m2 : min([zmax, self.fmergerV2(m1+m2)/ff])
+        zp1min = lambda m1, m2 : 1
+        omegagwz, _ = scipy.integrate.tplquad(ominsp, 5, 50, _m2min, _m2max, zp1min, zp1merge)
+        zp1ring = lambda m1, m2 : min([zmax, self.fqnrV2(m1+m2)/ff])
+        zp1minerge = lambda m1, m2 : min([zmax, max([1, self.fmergerV2(m1+m2)/ff])])
+        omegamerg, _ = scipy.integrate.tplquad(ommerg, 5, 50, _m2min, _m2max, zp1minerge, zp1ring)
+        return omegagwz + omegamerg
 
-    def OmegaGW(self, freq, Norm=56., alpha=-2.3):
+    def OmegaGW(self, freq, Norm=56., alpha=-2.3, m2min=5, m2max=50):
         """OmegaGW as a function of frequency. Normalization is in units of mergers per Gpc^3 per year. alpha is the power law of the mass distribution assumed. We are reasonably insensitive to this, so we do not vary it in the chain."""
         Hub = 67.9 * self.ureg("km/s/Mpc")
-        omegagw_unnormed = np.array([self._omegagwz(ff, alpha=alpha) for ff in freq])
+        omegagw_unnormed = np.array([self._omegagwz(ff, alpha=alpha, m2min=m2min, m2max = m2max) for ff in freq])
         #See eq. 2 of 1609.03565
         freq = freq * self.ureg("Hz")
         normfac = (Norm * self.Normunit / Hub * freq / self.ureg("speed_of_light")**2 / self.rhocrit())
@@ -507,68 +503,16 @@ class BinaryBHGWB:
 class EMRIGWB(BinaryBHGWB):
     """Subclasses the Binary BH model for EMRIs. Currently assumes that
     the emission frequencies of the phases are as for the normal binaries (which is not totally true)."""
-    def dEdfstot(self, femit, alpha=-2.3, beta=-1.):
-        """Total energy per unit strain in all phases. The idea here is that m1
-           follows the normal mass distribution for stellar mass black holes
-           and m2 follows a power law for SMBHs from TNG."""
-        nsamp = 100
-        um = 50
-        m1 = np.linspace(5, um, nsamp)
-        weights = m1**alpha
-        weight = np.trapz(y=weights, x=m1)*(um-5)
-        m2 = np.linspace(2e6, 1e10, nsamp)
-        ii = np.where(m2 > 1e8)
-        weights2 = np.ones_like(m2)
-        weights2[ii] = (m2[ii]/1e8)**beta
-        weight2 = np.trapz(y=weights2, x=m2)*(1e10-2e6)
-        m1rep = np.repeat(m1, nsamp)
-        m2rep = np.tile(m2, nsamp)
-        fmerg = self.fmergerV2(m1rep + m2rep)
-        fqnr = self.fqnrV2(m1rep + m2rep)
-        weights = np.repeat(weights, nsamp)
-        w2rep = np.tile(weights2, nsamp)
-        weights += w2rep
-        weights /= (weight * weight2)
-        ii = np.where(femit > fqnr)
-        weights[ii] = 0
-        ii = np.where((femit < fqnr)*(femit > fmerg))
-        weights[ii] *= self.dEdfsMergV2(m1rep[ii], m2rep[ii], femit)
-        ii = np.where(femit < fmerg)
-        mchirp = (m1rep[ii]*m2rep[ii])/(m1rep[ii]+m2rep[ii])**(1./3)
-        weights[ii] *= self.dEdfsInsp(mchirp, femit)
-        return np.trapz([np.trapz(weights[i:i+nsamp], m2) for i in range(nsamp)], m1)
+    def OmegaGW(self, freq, Norm=0.01, alpha=-2.3):
+        """OmegaGW as a function of frequency. Normalization is in units of mergers per Gpc^3 per year."""
+        return super().OmegaGW(freq, Norm=Norm, alpha = alpha, m2min=2e6, m2max=1e10)
 
 class IMRIGWB(BinaryBHGWB):
     """Subclasses the Binary BH model for IMRIs. Currently assumes that
     the emission frequencies of the phases are as for the normal binaries (which is not totally true)."""
-    def dEdfstot(self, femit, alpha=-2.3):
-        """Total energy per unit strain in all phases. The idea here is that m1
-           follows the normal mass distribution for stellar mass black holes
-           and is uniform."""
-        nsamp = 100
-        um = 50
-        m1 = np.linspace(5, um, nsamp)
-        weights = m1**alpha
-        weight = np.trapz(y=weights, x=m1)*(um-5)
-        m2 = np.linspace(1e2, 1e4, nsamp)
-        m1rep = np.repeat(m1, nsamp)
-        m2rep = np.tile(m2, nsamp)
-        fmerg = self.fmergerV2(m1rep + m2rep)
-        fqnr = self.fqnrV2(m1rep + m2rep)
-        weights = np.repeat(weights, nsamp)
-        weights /= weight
-        ii = np.where(femit > fqnr)
-        weights[ii] = 0
-        ii = np.where((femit < fqnr)*(femit > fmerg))
-        weights[ii] *= self.dEdfsMergV2(m1rep[ii], m2rep[ii], femit)
-        ii = np.where(femit < fmerg)
-        mchirp = (m1rep[ii]*m2rep[ii])/(m1rep[ii]+m2rep[ii])**(1./3)
-        weights[ii] *= self.dEdfsInsp(mchirp, femit)
-        return np.trapz([np.trapz(weights[i:i+nsamp], m2) for i in range(nsamp)], m1)
-
     def OmegaGW(self, freq, Norm=0.01, alpha=-2.3):
         """OmegaGW as a function of frequency. Normalization is in units of mergers per Gpc^3 per year."""
-        return super().OmegaGW(freq, Norm=Norm, alpha = alpha)
+        return super().OmegaGW(freq, Norm=Norm, alpha = alpha, m2min=1e2, m2max=1e4)
 
 def gcorr(x):
     """Corrections to radiation density from freezeout"""
