@@ -476,9 +476,10 @@ class BinaryBHGWB:
         #zmin: exclude binaries that are at zero redshift as they are resolved, even with current LIGO.
         zmin = 1.1
         #m1 has a power law weight. m2 is uniformly sampled.
-        scalefac = lambda zzp1, m2, m1 : self.Rsfrnormless(zzp1) / HubbleEz(zzp1) * m1**alpha * self.mchirp(m1, m2)
-        ominsp = lambda zzp1, m2, m1 : scalefac(zzp1, m2, m1) * self.dEdfsInsp(self.mchirp(m1, m2), ff*zzp1)
-        ommerg = lambda zzp1, m2, m1 : scalefac(zzp1, m2, m1) * self.dEdfsMergV2(m1, m2, ff*zzp1)
+
+        scalefac = lambda zzp1, m1 : self.Rsfrnormless(zzp1) / HubbleEz(zzp1) * m1**alpha
+        ominsp = lambda zzp1, m2, m1 : scalefac(zzp1, m1) * self.dEdfsInsp(self.mchirp(m1, m2), ff*zzp1)
+        ommerg = lambda zzp1, m2, m1 : scalefac(zzp1, m1) * self.dEdfsMergV2(m1, m2, ff*zzp1)
         #Constant limits for m2.
         _m2max = lambda m1 : m2max
         _m2min = lambda m1 : m2min
