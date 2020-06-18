@@ -487,7 +487,7 @@ class BinaryBHGWB:
             omegagwm1, _ = scipy.integrate.quad(mm1int, 5, 50)
             return omegagwm1 * omegagwz
         #If we are never in the merger phase, do nothing
-        if ff * zmin > self.fqnrv2(5 + m2min):
+        if ff * zmin > self.fqnrV2(5 + m2min):
             return 0
         #Constant limits for m2.
         _m2max = lambda m1 : m2max
