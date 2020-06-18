@@ -476,18 +476,19 @@ class BinaryBHGWB:
         #zmin: exclude binaries that are at zero redshift as they are resolved, even with current LIGO.
         zmin = 1.1
         #m1 has a power law weight. m2 is uniformly sampled.
-        scalefac = lambda zzp1: self.Rsfrnormless(zzp1) / HubbleEz(zzp1)
-        ominsp = lambda zzp1, m2, m1 : scalefac(zzp1) * self.dEdfsInsp(self.mchirp(m1, m2), ff*zzp1) * m1**alpha
-        ommerg = lambda zzp1, m2, m1 : scalefac(zzp1) * self.dEdfsMergV2(m1, m2, ff*zzp1) * m1**alpha
+        ominsp = lambda zzp1, m2, m1 : self.Rsfrnormless(zzp1) / HubbleEz(zzp1) * self.dEdfsInsp(self.mchirp(m1, m2), ff*zzp1) * m1**alpha
+        ommerg = lambda zzp1, m2, m1 : self.Rsfrnormless(zzp1) / HubbleEz(zzp1) * self.dEdfsMergV2(m1, m2, ff*zzp1) * m1**alpha
         #If we are always in the inspiral band the integrals become separable.
         if zmax < self.fmergerV2(50+m2max)/ff:
-            zzfreq = lambda zzp1: scalefac(zzp1) * 1./3.*(math.pi**2*self.GG**2/(ff*zzp1))**(1/3)*self.ms**(5./3)
+            zzfreq = lambda zzp1: self.Rsfrnormless(zzp1) / HubbleEz(zzp1) * 1./3.*(math.pi**2*self.GG**2/(ff*zzp1))**(1/3)*self.ms**(5./3)
             omegagwz, _ = scipy.integrate.quad(zzfreq, zmin, zmax)
             # The m2 integral can be done analytically.
             mm1int = lambda m1: 0.3 * m1**(alpha+1) * ((m1+m2max)**(2./3)*(2*m2max-3*m1)-(m1+m2min)**(2./3) * (2*m2min-3*m1))
             omegagwm1, _ = scipy.integrate.quad(mm1int, 5, 50)
             return omegagwm1 * omegagwz
-
+        #If we are never in the merger phase, do nothing
+        if ff * zmin > self.fqnrv2(5 + m2min):
+            return 0
         #Constant limits for m2.
         _m2max = lambda m1 : m2max
         _m2min = lambda m1 : m2min
@@ -496,7 +497,7 @@ class BinaryBHGWB:
         zp1min = lambda m1, m2 : zmin
         omegagwz, _ = scipy.integrate.tplquad(ominsp, 5, 50, _m2min, _m2max, zp1min, zp1merge)
         zp1ring = lambda m1, m2 : min([zmax, self.fqnrV2(m1+m2)/ff])
-        zp1minerge = lambda m1, m2 : min([zmax, max([1, self.fmergerV2(m1+m2)/ff])])
+        zp1minerge = lambda m1, m2 : min([zmax, max([zmin, self.fmergerV2(m1+m2)/ff])])
         omegamerg, _ = scipy.integrate.tplquad(ommerg, 5, 50, _m2min, _m2max, zp1minerge, zp1ring)
         return omegagwz + omegamerg
 
