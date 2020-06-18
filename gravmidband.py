@@ -476,10 +476,18 @@ class BinaryBHGWB:
         #zmin: exclude binaries that are at zero redshift as they are resolved, even with current LIGO.
         zmin = 1.1
         #m1 has a power law weight. m2 is uniformly sampled.
+        scalefac = lambda zzp1: self.Rsfrnormless(zzp1) / HubbleEz(zzp1)
+        ominsp = lambda zzp1, m2, m1 : scalefac(zzp1) * self.dEdfsInsp(self.mchirp(m1, m2), ff*zzp1) * m1**alpha
+        ommerg = lambda zzp1, m2, m1 : scalefac(zzp1) * self.dEdfsMergV2(m1, m2, ff*zzp1) * m1**alpha
+        #If we are always in the inspiral band the integrals become separable.
+        if zmax < self.fmergerV2(50+m2max)/ff:
+            zzfreq = lambda zzp1: scalefac(zzp1) * 1./3.*(math.pi**2*self.GG**2/(ff*zzp1))**(1/3)*self.ms**(5./3)
+            omegagwz, _ = scipy.integrate.quad(zzfreq, zmin, zmax)
+            # The m2 integral can be done analytically.
+            mm1int = lambda m1: 0.3 * m1**(alpha+1) * ((m1+m2max)**(2./3)*(2*m2max-3*m1)-(m1+m2min)**(2./3) * (2*m2min-3*m1))
+            omegagwm1, _ = scipy.integrate.quad(mm1int, 5, 50)
+            return omegagwm1 * omegagwz
 
-        scalefac = lambda zzp1, m1 : self.Rsfrnormless(zzp1) / HubbleEz(zzp1) * m1**alpha
-        ominsp = lambda zzp1, m2, m1 : scalefac(zzp1, m1) * self.dEdfsInsp(self.mchirp(m1, m2), ff*zzp1)
-        ommerg = lambda zzp1, m2, m1 : scalefac(zzp1, m1) * self.dEdfsMergV2(m1, m2, ff*zzp1)
         #Constant limits for m2.
         _m2max = lambda m1 : m2max
         _m2min = lambda m1 : m2min
