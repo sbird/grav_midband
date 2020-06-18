@@ -472,7 +472,9 @@ class BinaryBHGWB:
         For numerical reasons, we split this into two segments, one for mergers, one for inspirals.
         """
         #From z= 0.01 to 20.
-        zmax = 15
+        zmax = 10
+        #zmin: exclude binaries that are at zero redshift as they are resolved, even with current LIGO.
+        zmin = 1.1
         #m1 has a power law weight. m2 is uniformly sampled.
         scalefac = lambda zzp1, m2, m1 : self.Rsfrnormless(zzp1) / HubbleEz(zzp1) * m1**alpha * self.mchirp(m1, m2)
         ominsp = lambda zzp1, m2, m1 : scalefac(zzp1, m2, m1) * self.dEdfsInsp(self.mchirp(m1, m2), ff*zzp1)
@@ -482,7 +484,7 @@ class BinaryBHGWB:
         _m2min = lambda m1 : m2min
         #Limits for z+1: lower limit is 1, upper depends on f.
         zp1merge = lambda m1, m2 : min([zmax, self.fmergerV2(m1+m2)/ff])
-        zp1min = lambda m1, m2 : 1
+        zp1min = lambda m1, m2 : zmin
         omegagwz, _ = scipy.integrate.tplquad(ominsp, 5, 50, _m2min, _m2max, zp1min, zp1merge)
         zp1ring = lambda m1, m2 : min([zmax, self.fqnrV2(m1+m2)/ff])
         zp1minerge = lambda m1, m2 : min([zmax, max([1, self.fmergerV2(m1+m2)/ff])])
