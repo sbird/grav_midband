@@ -560,7 +560,7 @@ class IMRIGWB(BinaryBHGWB):
 
     def OmegaGW(self, freq, Norm=0.01, alpha=-2.3):
         """OmegaGW as a function of frequency. Normalization is in units of mergers per Gpc^3 per year."""
-        return super().OmegaGW(freq, Norm=Norm, alpha = alpha, m2min=1e2, m2max=1e4)
+        return super().OmegaGW(freq, Norm=Norm, alpha = alpha, m2min=5e2, m2max=1e4)
 
 def gcorr(x):
     """Corrections to radiation density from freezeout"""
