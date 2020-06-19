@@ -522,6 +522,42 @@ class EMRIGWB(BinaryBHGWB):
 class IMRIGWB(BinaryBHGWB):
     """Subclasses the Binary BH model for IMRIs. Currently assumes that
     the emission frequencies of the phases are as for the normal binaries (which is not totally true)."""
+    def _omegagwz(self, ff, alpha=-2.3, m2min=5, m2max=50):
+        """Integrand as a function of redshift, taking care of the redshifting factors.
+        For numerical reasons, we split this into two segments, one for mergers, one for inspirals.
+        We make the approximation that m1 + m2 ~ m2 for IMRIs.
+        """
+        #From z= 0.01 to 20.
+        zmax = 10
+        #zmin: exclude binaries that are at zero redshift as they are resolved, even with current LIGO.
+        zmin = 1.1
+        #m1 has a power law weight. m2 is uniformly sampled.
+        #m1+m2 ~ m2 -> mchirp = m2 m1/m2^(1/3) = m2^(2/3) m1
+        EInsp = lambda femit: 1./3.*(math.pi**2*self.GG**2/femit)**(1/3)*self.ms**(5./3)
+        ominsp = lambda zzp1, m2 : self.Rsfrnormless(zzp1) / HubbleEz(zzp1) * EInsp(ff*zzp1) * m2**(2/3)
+        Emergapprox = lambda m2: 1./3.*(math.pi**2*self.GG**2)**(1/3)*(self.ms**(5./3)*m2**(2/3))/self.fmergerV2(m2)
+        ommerg = lambda zzp1, m2: self.Rsfrnormless(zzp1) / HubbleEz(zzp1) * Emergapprox(m2) *(ff*zzp1)**(2./3)
+        #Integrated m1 dependence
+        m1integral = (50**(alpha+2)-5**(alpha+2))/(alpha+1)
+        #If we are always in the inspiral band the integrals become separable.
+        if zmax < self.fmergerV2(50+m2max)/ff:
+            zzfreq = lambda zzp1: self.Rsfrnormless(zzp1) / HubbleEz(zzp1) * 1./3.*(math.pi**2*self.GG**2/(ff*zzp1))**(1/3)*self.ms**(5./3)
+            omegagwz, _ = scipy.integrate.quad(zzfreq, zmin, zmax)
+            # The m2 and m1 integrals can be done analytically as we approximate m1 << m2.
+            omegagwm1 = 0.3 * m1integral * ((m2max)**(2./3)*(2*m2max)-(m2min)**(2./3) * (2*m2min))
+            return omegagwm1 * omegagwz
+        #If we are never in the merger phase, do nothing
+        if ff * zmin > self.fqnrV2(m2min):
+            return 0
+        #Limits for z+1: lower limit is 1, upper depends on f.
+        zp1merge = lambda m2 : min([zmax, self.fmergerV2(m2)/ff])
+        zp1min = lambda m2 : zmin
+        omegagwz, _ = scipy.integrate.dblquad(ominsp, m2min, m2max, zp1min, zp1merge)
+        zp1ring = lambda m2 : min([zmax, self.fqnrV2(m2)/ff])
+        zp1minerge = lambda m2 : min([zmax, max([zmin, self.fmergerV2(m2)/ff])])
+        omegamerg, _ = scipy.integrate.dblquad(ommerg, m2min, m2max, zp1minerge, zp1ring)
+        return m1integral * (omegagwz + omegamerg)
+
     def OmegaGW(self, freq, Norm=0.01, alpha=-2.3):
         """OmegaGW as a function of frequency. Normalization is in units of mergers per Gpc^3 per year."""
         return super().OmegaGW(freq, Norm=Norm, alpha = alpha, m2min=1e2, m2max=1e4)
