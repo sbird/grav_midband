@@ -41,7 +41,7 @@ def make_sgwb_plot():
         sff, spo = ss.omegadens()
         plt.loglog(sff, spo, "--", label=sat)
 
-    freqs = np.logspace(-7, 4, 200)
+    freqs = np.logspace(-7, 4, 50)
 
     csgw = gravmidband.CosmicStringGWB()
     omegacs = csgw.OmegaGW(freqs, 1.e-14)
