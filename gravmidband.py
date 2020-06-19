@@ -512,13 +512,6 @@ class BinaryBHGWB:
         #assert normfac.check("[]")
         return  normfac.magnitude * omegagw_unnormed
 
-class EMRIGWB(BinaryBHGWB):
-    """Subclasses the Binary BH model for EMRIs. Currently assumes that
-    the emission frequencies of the phases are as for the normal binaries (which is not totally true)."""
-    def OmegaGW(self, freq, Norm=0.01, alpha=-2.3):
-        """OmegaGW as a function of frequency. Normalization is in units of mergers per Gpc^3 per year."""
-        return super().OmegaGW(freq, Norm=Norm, alpha = alpha, m2min=2e6, m2max=1e10)
-
 class IMRIGWB(BinaryBHGWB):
     """Subclasses the Binary BH model for IMRIs. Currently assumes that
     the emission frequencies of the phases are as for the normal binaries (which is not totally true)."""
@@ -558,9 +551,16 @@ class IMRIGWB(BinaryBHGWB):
         omegamerg, _ = scipy.integrate.dblquad(ommerg, m2min, m2max, zp1minerge, zp1ring)
         return m1integral * (omegagwz + omegamerg)
 
-    def OmegaGW(self, freq, Norm=0.01, alpha=-2.3):
+    def OmegaGW(self, freq, Norm=0.01, alpha=-2.3, m2min=5e2, m2max=1e4):
         """OmegaGW as a function of frequency. Normalization is in units of mergers per Gpc^3 per year."""
         return super().OmegaGW(freq, Norm=Norm, alpha = alpha, m2min=5e2, m2max=1e4)
+
+class EMRIGWB(IMRIGWB):
+    """Subclasses the Binary BH model for EMRIs. Currently assumes that
+    the emission frequencies of the phases are as for the normal binaries (which is not totally true)."""
+    def OmegaGW(self, freq, Norm=0.01, alpha=-2.3):
+        """OmegaGW as a function of frequency. Normalization is in units of mergers per Gpc^3 per year."""
+        return super().OmegaGW(freq, Norm=Norm, alpha = alpha, m2min=2e6, m2max=1e10)
 
 def gcorr(x):
     """Corrections to radiation density from freezeout"""
