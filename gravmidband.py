@@ -538,13 +538,13 @@ class IMRIGWB(BinaryBHGWB):
         Emergapprox = lambda m2: 1./3.*(math.pi**2*self.GG**2)**(1/3)*(self.ms**(5./3)*m2**(2/3))/self.fmergerV2(m2)
         ommerg = lambda zzp1, m2: self.Rsfrnormless(zzp1) / HubbleEz(zzp1) * Emergapprox(m2) *(ff*zzp1)**(2./3)
         #Integrated m1 dependence
-        m1integral = (50**(alpha+2)-5**(alpha+2))/(alpha+1)
+        m1integral = (50**(alpha+2)-5**(alpha+2))/(alpha+2)
         #If we are always in the inspiral band the integrals become separable.
         if zmax < self.fmergerV2(50+m2max)/ff:
             zzfreq = lambda zzp1: self.Rsfrnormless(zzp1) / HubbleEz(zzp1) * 1./3.*(math.pi**2*self.GG**2/(ff*zzp1))**(1/3)*self.ms**(5./3)
             omegagwz, _ = scipy.integrate.quad(zzfreq, zmin, zmax)
             # The m2 and m1 integrals can be done analytically as we approximate m1 << m2.
-            omegagwm1 = 0.3 * m1integral * ((m2max)**(2./3)*(2*m2max)-(m2min)**(2./3) * (2*m2min))
+            omegagwm1 = 0.3 * m1integral * ((m2max)**(2./3)*(2*m2max)-(5+m2min)**(2./3) * (2*m2min))
             return omegagwm1 * omegagwz
         #If we are never in the merger phase, do nothing
         if ff * zmin > self.fqnrV2(m2min):
