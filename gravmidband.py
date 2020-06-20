@@ -99,7 +99,7 @@ class SatelliteSensitivity(Sensitivity):
             self.satfreq = np.logspace(np.log10(1.95e-7), np.log10(2.08), 400)
             # The satellite arm length in m
             self.L0 = 2.5e9
-            #The acceleration noise in m^2 /Hz
+            #The acceleration noise in m^2 s^-4 /Hz
             self.Sa = 3.e-15**2
             #The position noise in m^2 /Hz
             self.Sx = 1.5e-11**2
