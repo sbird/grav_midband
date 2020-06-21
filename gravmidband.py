@@ -188,7 +188,7 @@ class LIGOSensitivity(Sensitivity):
 class SGWBExperiment:
     """Helper class to hold pre-computed parts of the experimental data,
        presenting a consistent interface for different experiments."""
-    def __init__(self, binarybh, sensitivity, trueparams, imribh=None, cstring=None, phase = None, nsamples=400):
+    def __init__(self, binarybh, sensitivity, trueparams, imribh=None, cstring=None, phase = None, nsamples=100):
         self.cstring = cstring
         self.sensitivity = sensitivity
         self.freq, self.psd = sensitivity.omegadens()
