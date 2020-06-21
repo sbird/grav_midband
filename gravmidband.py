@@ -321,7 +321,7 @@ class Likelihoods:
         llike = 0
 
         for exp in self.experiments:
-            model = exp.omegamodel(Gmu = np.exp(params[0]), bbhamp = params[1], imriamp = params[2])
+            model = exp.omegamodel(cosmo = np.exp(params[0]), bbhamp = params[1], imriamp = params[2])
             llike += - 1 * np.trapz(((model - exp.mockdata)/ exp.psd)**2, x=exp.freq)
             #like += ampprior * np.size(exp.freq)
         #print(np.exp(params[0]), like)
