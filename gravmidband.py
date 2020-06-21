@@ -823,6 +823,7 @@ if __name__=="__main__":
     like.do_sampling(savefile = "samples_ligo_lisa_string_bbh.txt")
     #LISA + DECIGO
     like = Likelihoods(imri=True, strings=True, ligo = True, satellites=("lisa","decigo"))
+    like.do_sampling(savefile = "samples_ligo_lisa_decigo_string_bbh.txt")
     #LISA + TianGo
     like = Likelihoods(imri=True, strings=True, ligo = True, satellites=("lisa","tiango"))
     like.do_sampling(savefile = "samples_ligo_lisa_tiango_string_phase_bbh_imri.txt")
@@ -831,7 +832,6 @@ if __name__=="__main__":
     like = Likelihoods(imri=True, phase=True, strings=False, ligo = True, satellites="lisa")
     like.do_sampling(savefile = "samples_ligo_lisa_phase_bbh.txt")
     #LISA+TianGo with phase transition
-    like = Likelihoods(imri=True, phase=True, strings=False, ligo = True, satellites="lisa")
-    like.do_sampling(savefile = "samples_ligo_lisa_phase_bbh.txt")
+    like = Likelihoods(imri=True, phase=True, strings=False, ligo = True, satellites=("lisa", "tiango"))
+    like.do_sampling(savefile = "samples_ligo_lisa_tiango_phase_bbh.txt")
 
-    #like.do_sampling(savefile = "samples_ligo_lisa_decigo_string_bbh.txt")
