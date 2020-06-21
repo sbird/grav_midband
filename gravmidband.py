@@ -331,11 +331,12 @@ class Likelihoods:
         """Do the sampling with emcee"""
         #Limits
         #Say Gmu ranges from exp(-45) - exp(-14), LIGO merger rate between 0 and 100 and IMRI rate from 0 to 1.
-        pr = np.array([30, 100, 1])
+        pr = np.array([30, 100, 0.1])
         #Priors are assumed to be in the middle.
         cent = np.array([-30, 55, 0.05])
         p0 = [cent+2*pr/16.*np.random.rand(3)-pr/16. for _ in range(nwalkers)]
-        assert np.all([np.isfinite(self.lnlikelihood(pp)) for pp in p0])
+        lnk0 = np.array([self.lnlikelihood(pp) for pp in p0])
+        assert np.all(np.isfinite(lnk0))
         emcee_sampler = emcee.EnsembleSampler(nwalkers, 2, self.lnlikelihood)
         pos, _, _ = emcee_sampler.run_mcmc(p0, burnin)
         #Check things are reasonable
