@@ -337,7 +337,7 @@ class Likelihoods:
         p0 = [cent+2*pr/16.*np.random.rand(3)-pr/16. for _ in range(nwalkers)]
         lnk0 = np.array([self.lnlikelihood(pp) for pp in p0])
         assert np.all(np.isfinite(lnk0))
-        emcee_sampler = emcee.EnsembleSampler(nwalkers, 2, self.lnlikelihood)
+        emcee_sampler = emcee.EnsembleSampler(nwalkers, np.size(pr), self.lnlikelihood)
         pos, _, _ = emcee_sampler.run_mcmc(p0, burnin)
         #Check things are reasonable
         assert np.all(emcee_sampler.acceptance_fraction > 0.01)
