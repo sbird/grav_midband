@@ -262,7 +262,7 @@ class Likelihoods:
     """Class to perform likelihood analysis on SGWB.
     Args:
     """
-    def __init__(self, nsamples=400, strings=True, phase = False, imri = True, ligo = True, satellites="lisa"):
+    def __init__(self, nsamples=100, strings=True, phase = False, imri = True, ligo = True, satellites="lisa"):
         self.ureg = ureg
         self.binarybh = BinaryBHGWB()
 
@@ -819,19 +819,19 @@ def test_cs():
 
 if __name__=="__main__":
     #LISA only
-    like = Likelihoods(nsamples=400, imri=True, strings=True, ligo = True, satellites="lisa")
+    like = Likelihoods(imri=True, strings=True, ligo = True, satellites="lisa")
     like.do_sampling(savefile = "samples_ligo_lisa_string_bbh.txt")
     #LISA + DECIGO
-    like = Likelihoods(nsamples=400, imri=True, strings=True, ligo = True, satellites=("lisa","decigo"))
+    like = Likelihoods(imri=True, strings=True, ligo = True, satellites=("lisa","decigo"))
     #LISA + TianGo
-    like = Likelihoods(nsamples=400, imri=True, strings=True, ligo = True, satellites=("lisa","tiango"))
+    like = Likelihoods(imri=True, strings=True, ligo = True, satellites=("lisa","tiango"))
     like.do_sampling(savefile = "samples_ligo_lisa_tiango_string_phase_bbh_imri.txt")
 
     #LISA only with phase transition
-    like = Likelihoods(nsamples=400, imri=True, phase=True, strings=False, ligo = True, satellites="lisa")
+    like = Likelihoods(imri=True, phase=True, strings=False, ligo = True, satellites="lisa")
     like.do_sampling(savefile = "samples_ligo_lisa_phase_bbh.txt")
     #LISA+TianGo with phase transition
-    like = Likelihoods(nsamples=400, imri=True, phase=True, strings=False, ligo = True, satellites="lisa")
+    like = Likelihoods(imri=True, phase=True, strings=False, ligo = True, satellites="lisa")
     like.do_sampling(savefile = "samples_ligo_lisa_phase_bbh.txt")
 
     #like.do_sampling(savefile = "samples_ligo_lisa_decigo_string_bbh.txt")
