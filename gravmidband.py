@@ -363,10 +363,15 @@ class Likelihoods:
     def do_sampling(self, savefile, nwalkers=100, burnin=300, nsamples = 300, while_loop=True, maxsample=200):
         """Do the sampling with emcee"""
         #Limits
-        #Say Gmu ranges from exp(-45) - exp(-14), LIGO merger rate between 0 and 100 and IMRI rate from 0 to 1.
-        pr = np.array([30, 100, 0.1])
-        #Priors are assumed to be in the middle.
-        cent = np.array([-30, 55, 0.05])
+        if self.cstring is not None:
+            #Say Gmu ranges from exp(-45) - exp(-14), LIGO merger rate between 0 and 100
+            #and IMRI rate from 0 to 1.
+            pr = np.array([20, 100, 0.1])
+            #Priors are assumed to be in the middle.
+            cent = np.array([-30, 55, 0.05])
+        elif self.phase is not None:
+            pr = np.array([2, 100, 0.1, 2])
+            cent = np.array([0, 100, 0.1, 0.5])
         p0 = [cent+2*pr/16.*np.random.rand(3)-pr/16. for _ in range(nwalkers)]
         lnk0 = np.array([self.lnlikelihood(pp) for pp in p0])
         assert np.all(np.isfinite(lnk0))
