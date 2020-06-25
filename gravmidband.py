@@ -229,11 +229,11 @@ class SGWBExperiment:
             return 0
         return self.cstring.OmegaGW(self.freq, Gmu)
 
-    def phasemodel(self, Gmu):
+    def phasemodel(self, Ts, alpha):
         """The phase transition SGWB model."""
         if self.phase is None:
             return 0
-        return self.phase.OmegaGW(self.freq, Gmu)
+        return self.phase.OmegaGW(self.freq, Ts, alpha = alpha)
 
     def imrimodel(self, amp):
         """IMRI model"""
@@ -255,7 +255,7 @@ class SGWBExperiment:
         https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.116.131102"""
         return amp * self.bbh_singleamp
 
-    def omegamodel(self, cosmo, bbhamp, imriamp=0):
+    def omegamodel(self, cosmo, bbhamp, imriamp=0, ptalpha = 1):
         """Construct a model with three free parameters,
            combining multiple SGWB sources:
            Strings, BBH (LIGO) and BBH (IMRI)."""
@@ -263,7 +263,7 @@ class SGWBExperiment:
         if self.cstring is not None:
             cos = self.cosmicstringmodel(cosmo)
         elif self.phase is not None:
-            cos = self.phasemodel(cosmo)
+            cos = self.phasemodel(cosmo, alpha = ptalpha)
         return cos + self.imrimodel(imriamp) + self.bhbinarymerger(bbhamp)
 
 class Likelihoods:
@@ -297,30 +297,51 @@ class Likelihoods:
         if satellites[0] != "":
             self.sensitivities += [SatelliteSensitivity(satellite = sat) for sat in satellites]
 
-        #This is the "true" model we are trying to detect: no cosmic strings, LIGO current best fit merger rate.
-        self.trueparams = [0, 56., 0.01]
-        self.experiments = [SGWBExperiment(binarybh = self.binarybh, imribh = self.imribh, phase = self.phase, cstring = self.cstring, sensitivity = sens, trueparams = self.trueparams, nsamples=nsamples) for sens in self.sensitivities]
+        if self.cstring is not None:
+            #This is the "true" model we are trying to detect: no cosmic strings,
+            #LIGO current best fit merger rate.
+            self.trueparams = [0, 56., 0.01]
+        elif self.phase is not None:
+            #Phase transition parameters being zero will lead to divide by zero,
+            #so just make them small and the frequency high.
+            self.trueparams = [1e10, 56., 0.01, 1e-9]
+        self.experiments = [SGWBExperiment(binarybh = self.binarybh, imribh = self.imribh, cstring = self.cstring, phase = self.phase, sensitivity = sens, trueparams = self.trueparams, nsamples=nsamples) for sens in self.sensitivities]
 
         #Expected number of ligo detections at time of LISA launch for the BBH amplitude prior.
         self.nligo = 1000
 
     def lnlikelihood(self, params):
         """Likelihood parameters:
-        0 - cosmic string tension
+        0 - cosmic string tension or PT T* (frequency)
         1 - BH binary merger rate amplitude
         2 - IMRI merger rate amplitude
+        3 - PT amplitude alpha (if phase is not None)
         """
         #Priors: positive BBH merger rate
         if params[1] < 0:
             return -np.inf
         if params[2] < 0:
             return - np.inf
+        ptalpha = 1
         #CS string tension limit from EPTA
-        if params[0] > np.log(2.e-11):
-            return -np.inf
-        #Prevent underflow
-        if params[0] < -80:
-            return -np.inf
+        if self.cstring is not None:
+            if params[0] > np.log(2.e-11):
+                return -np.inf
+            #Prevent underflow
+            if params[0] < -80:
+                return -np.inf
+        elif self.phase is not None:
+            #Phase transition energy
+            if params[0] > 1e8:
+                return -np.inf
+            if params[0] < 1e-3:
+                return -np.inf
+            #alpha
+            if params[3] > 10:
+                return -np.inf
+            if params[3] < 1e-6:
+                return -np.inf
+            ptalpha = params[3]
         # LIGO prior: Gaussian on BBH merger rate with central value of the true value.
         # Remove this: it may be that the unresolved high redshift binaries merge
         # at a different rate to the low redshift ones and so we should allow a free amplitude
@@ -328,7 +349,7 @@ class Likelihoods:
         llike = 0
 
         for exp in self.experiments:
-            model = exp.omegamodel(cosmo = np.exp(params[0]), bbhamp = params[1], imriamp = params[2])
+            model = exp.omegamodel(cosmo = np.exp(params[0]), bbhamp = params[1], imriamp = params[2], ptalpha=ptalpha)
             llike += - 1 * np.trapz(((model - exp.mockdata)/ exp.psd)**2, x=exp.freq)
             #like += ampprior * np.size(exp.freq)
         #print(np.exp(params[0]), like)
@@ -842,4 +863,3 @@ if __name__=="__main__":
     #LISA+TianGo with phase transition
     like = Likelihoods(imri=True, phase=True, strings=False, ligo = True, satellites=("lisa", "tiango"))
     like.do_sampling(savefile = "samples_ligo_lisa_tiango_phase_bbh.txt")
-
