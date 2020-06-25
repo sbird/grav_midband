@@ -10,7 +10,7 @@ def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None):
     """Make a getdist plot"""
     samples = np.loadtxt(chainfile)
     ticks = {}
-    pnames = [ r"G\mu", r"BBH rate"]
+    pnames = [ r"G\mu", r"BBH rate", r"IMBH rate"]
     prange = None
     if ranges is not None:
         prange = {pnames[i] : ranges[i] for i in range(len(pnames))}
@@ -27,8 +27,8 @@ def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None):
     subplot_instance.triangle_plot([posterior_MCsamples], filled=True)
 #     colour_array = np.array(['black', 'red', 'magenta', 'green', 'green', 'purple', 'turquoise', 'gray', 'red', 'blue'])
     #Ticks we want to show for each parameter
-    ticks = {pnames[0]: [np.log(1e-35), np.log(1e-25), np.log(1e-15)]}
-    ticklabels = {pnames[0] : [r"$10^{-35}$", r"$10^{-25}$", r"$10^{-15}$"]}
+    ticks = {pnames[0]: [np.log(1e-20), np.log(1e-17), np.log(1e-15)]}
+    ticklabels = {pnames[0] : [r"$10^{-20}$", r"$10^{-17}$", r"$10^{-15}$"]}
     for pi in range(samples.shape[1]):
         for pi2 in range(pi + 1):
             #Place horizontal and vertical lines for the true point
@@ -44,7 +44,8 @@ def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None):
     plt.savefig(savefile)
 
 if __name__ == "__main__":
-    true_vals = [0, 56]
+    true_vals = [0, 56., 0.01]
     #ranges
-    ranges = [[-80, np.log(2e-11)], [0, 100]]
+    ranges = [[-50, np.log(2e-13)], [0, 100], [0,1]]
     make_plot("samples_ligo_lisa_string_bbh.txt", "like_ligo_lisa_string_bbh.pdf", true_parameter_values = true_vals, ranges=ranges)
+    make_plot("samples_ligo_lisa_tiango_string_bbh.txt", "like_ligo_lisa_tiango_string_bbh.pdf", true_parameter_values = true_vals, ranges=ranges)
