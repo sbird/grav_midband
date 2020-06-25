@@ -1,11 +1,8 @@
 """Make some useful plots"""
-import math
-import numpy as np
-import pint
-import matplotlib.pyplot as plt
-import matplotlib
-import gravmidband
 import json
+import numpy as np
+import matplotlib.pyplot as plt
+import gravmidband
 
 #matplotlib.use("PDF")
 
@@ -66,5 +63,47 @@ def make_sgwb_plot():
     plt.tight_layout()
     plt.savefig("sgwb.pdf")
 
+
+def make_string_plot():
+    """Plot stochastic gravitational wave backgrounds from cosmic strings."""
+    ligo = gravmidband.LIGOSensitivity()
+    #lisa = gravmidband.LISASensitivity()
+    #saff, sapo = lisa.omegadens()
+    goff, gopo = ligo.omegadens()
+    #plt.loglog(saff, sapo, "-", color="green", label="LISA")
+    plt.loglog(goff, gopo, "-", color="black", label="LIGO")
+
+    for sat in ("lisa", "tiango", "bdecigo"):
+        ss = gravmidband.SatelliteSensitivity(satellite = sat)
+        sff, spo = ss.omegadens()
+        plt.loglog(sff, spo, "--", label=sat)
+
+    freqs = np.logspace(-7, 4, 50)
+
+    csgw = gravmidband.CosmicStringGWB()
+    omegacs = csgw.OmegaGW(freqs, Gmu=1.e-16)
+    plt.loglog(freqs, omegacs, "-.", color="blue", label=r"CS: $G\mu = 10^{-16}$")
+
+    omegacs = csgw.OmegaGW(freqs, Gmu=1.e-17)
+    plt.loglog(freqs, omegacs, "--", color="red", label=r"CS: $G\mu = 10^{-17}$")
+
+    omegacs = csgw.OmegaGW(freqs, Gmu=1.e-18)
+    plt.loglog(freqs, omegacs, ":", color="grey", label=r"CS: $G\mu = 10^{-18}$")
+
+    omegacs = csgw.OmegaGW(freqs, Gmu=1.e-19)
+    plt.loglog(freqs, omegacs, "-", color="brown", label=r"CS: $G\mu = 10^{-19}$")
+
+    #emri = gravmidband.EMRIGWB()
+    #omegaemri = emri.OmegaGW(freqs)
+    #plt.loglog(freqs, omegaemri, ":", color="gold", label="EMRI mergers")
+
+    plt.legend(loc="upper left")
+    plt.xlabel("f (Hz)")
+    plt.ylabel("$\Omega_{GW}$")
+    plt.ylim(1e-20, 1)
+    plt.tight_layout()
+    plt.savefig("strings.pdf")
+
 if __name__ == "__main__":
     make_sgwb_plot()
+    make_string_plot()
