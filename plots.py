@@ -160,3 +160,4 @@ if __name__ == "__main__":
     make_string_plot()
     plt.clf()
     make_sgwb_plot()
+    plt.clf()
