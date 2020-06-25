@@ -96,7 +96,8 @@ class SatelliteSensitivity(Sensitivity):
         self.light = 299792458
         self.extdata = None
         if satellite == "lisa":
-            self.satfreq = np.logspace(np.log10(1.95e-7), np.log10(2.08), 400)
+            self.fmax = np.log10(2.08)
+            self.fmin = np.log10(1.95e-7)
             # The satellite arm length in m
             self.L0 = 2.5e9
             #The acceleration noise in m^2 s^-4 /Hz
@@ -115,22 +116,28 @@ class SatelliteSensitivity(Sensitivity):
             #(Note the factor of L0 to match our units)
             #The excess noise below 0.03 Hz is due to gravity gradient.
             self.extdata = np.loadtxt("TianGOskyAvg.txt")
-            self.satfreq = np.logspace(-4, 4, 400)
+            self.satfreq = np.logspace(-4, 4, 200)
             self.L0 = 1e5
             self.Sx = (2.e-22 * self.L0)**2
             self.Sa = (1.4e-22 * self.L0)**2
         elif satellite == "tianqin":
-            self.satfreq = np.logspace(-5, 1, 400)
+            self.fmax = 1
+            self.fmin = -5
             self.L0 = np.sqrt(3) * 1.e8
             self.Sa = 1.e-15**2
             self.Sx = 1.e-12**2
         elif satellite == "bdecigo":
-            self.satfreq = np.logspace(-2, 2, 400)
+            self.fmax = 2
+            self.fmin = -2
             self.L0 = 1.e5
             self.Sa = (1.e-16/30)**2
             #This number is not in the DECIGO 2017 paper.
             #It is derived by requiring that the strain sensitivity be at 2x10^-23 /Hz^1/2.
             self.Sx = 3.e-18**2
+        #Equal numbers of samples per frequency decade, so that satellites are equally weighted
+        #per unit log(frequency)
+        self.nsamples_per_dec = 20
+        self.satfreq = np.logspace(self.fmin, self.fmax, int(self.nsamples_per_dec * (self.fmax - self.fmin)))
 
     def PSD(self):
         """Get the root power spectral density in Hz^[-1/2]"""
@@ -317,7 +324,6 @@ class Likelihoods:
         # Remove this: it may be that the unresolved high redshift binaries merge
         # at a different rate to the low redshift ones and so we should allow a free amplitude
         # ampprior = -1 * (params[1] - self.trueparams[1])**2 / self.nligo
-
         llike = 0
 
         for exp in self.experiments:
