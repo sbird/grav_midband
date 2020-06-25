@@ -194,8 +194,8 @@ class LIGOSensitivity(Sensitivity):
         self.length *= 3.154e7
         fmin = np.log10(self.aligo[0,0])
         fmax = np.log10(self.aligo[-1,0])
-        nsample = (fmax - fmin) * self.nsamples_per_dec
-        self.ligofreq = int(np.logspace(fmin, fmax, nsample))
+        nsample = int((fmax - fmin) * self.nsamples_per_dec)
+        self.ligofreq = np.logspace(fmin, fmax, nsample)
         self.ligopsd = self.downsample(self.ligofreq, self.aligo[:,0], self.aligo[:,1])
 
     def PSD(self):
