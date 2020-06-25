@@ -830,7 +830,7 @@ if __name__=="__main__":
     like = Likelihoods(imri=True, strings=True, ligo = True, satellites="lisa")
     like.do_sampling(savefile = "samples_ligo_lisa_string_bbh.txt")
     #LISA + DECIGO
-    like = Likelihoods(imri=True, strings=True, ligo = True, satellites=("lisa","decigo"))
+    like = Likelihoods(imri=True, strings=True, ligo = True, satellites=("lisa","bdecigo"))
     like.do_sampling(savefile = "samples_ligo_lisa_decigo_string_bbh.txt")
     #LISA + TianGo
     like = Likelihoods(imri=True, strings=True, ligo = True, satellites=("lisa","tiango"))
