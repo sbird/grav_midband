@@ -116,8 +116,8 @@ class SatelliteSensitivity(Sensitivity):
             #(Note the factor of L0 to match our units)
             #The excess noise below 0.03 Hz is due to gravity gradient.
             self.extdata = np.loadtxt("TianGOskyAvg.txt")
-            self.fmin = -4
-            self.fmax = 4
+            self.fmin = -2
+            self.fmax = 2
             self.L0 = 1e5
             self.Sx = (2.e-22 * self.L0)**2
             self.Sa = (1.4e-22 * self.L0)**2
