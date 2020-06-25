@@ -17,7 +17,7 @@ def sensitivity():
     lisa = gravmidband.LISASensitivity()
     plt.loglog(lisa.lisa[:,0], lisa.lisa[:,1], label="LISA MakeCurve")
 
-    for sat in ("lisa", "tianqin", "bdecigo"):
+    for sat in ("lisa", "tiango", "bdecigo"):
         ss = gravmidband.SatelliteSensitivity(satellite = sat)
         sff, spo = ss.PSD()
         plt.loglog(sff, spo, "--", label=sat)
@@ -33,7 +33,7 @@ def make_sgwb_plot():
     #plt.loglog(saff, sapo, "-", color="green", label="LISA")
     plt.loglog(goff, gopo, "-", color="black", label="LIGO")
 
-    for sat in ("lisa", "tianqin", "tiango", "bdecigo"):
+    for sat in ("lisa", "tiango", "bdecigo"):
         ss = gravmidband.SatelliteSensitivity(satellite = sat)
         sff, spo = ss.omegadens()
         plt.loglog(sff, spo, "--", label=sat)
@@ -128,8 +128,8 @@ def make_pt_plot():
     #omegacs = csgw.OmegaGW(freqs, Ts=100)
     #plt.loglog(freqs, omegacs, "--", color="red", label=r"PT: $T_* = 100 \;\mathrm{GeV}$")
 
-    #omegacs = csgw.OmegaGW(freqs, Ts=0.01)
-    #plt.loglog(freqs, omegacs, ":", color="grey", label=r"PT: $T_* = 10^{-2} \;\mathrm{GeV}$")
+    omegacs = csgw.OmegaGW(freqs, Ts=0.01)
+    plt.loglog(freqs, omegacs, ":", color="grey", label=r"PT: $T_* = 10^{-2} \;\mathrm{GeV}$")
 
     omegacs = csgw.OmegaGW(freqs, Ts=1e4)
     plt.loglog(freqs, omegacs, "-", color="brown", label=r"PT: $T_* = 10^{4} \;\mathrm{GeV}$")
@@ -140,8 +140,8 @@ def make_pt_plot():
     #omegacs = csgw.OmegaGW(freqs, Ts=1e4, alpha=10)
     #plt.loglog(freqs, omegacs, "-", color="orange", label=r"PT: $\alpha=10 T_* = 10^{4} \;\mathrm{GeV}$")
 
-    #omegacs = csgw.OmegaGW(freqs, Ts=1e6)
-    #plt.loglog(freqs, omegacs, "-", color="green", label=r"PT: $T_* = 10^{6} \;\mathrm{GeV}$")
+    omegacs = csgw.OmegaGW(freqs, Ts=1e6)
+    plt.loglog(freqs, omegacs, "-", color="green", label=r"PT: $T_* = 10^{6} \;\mathrm{GeV}$")
 
     #emri = gravmidband.EMRIGWB()
     #omegaemri = emri.OmegaGW(freqs)
@@ -156,5 +156,7 @@ def make_pt_plot():
 
 if __name__ == "__main__":
     make_pt_plot()
+    plt.clf()
     make_string_plot()
+    plt.clf()
     make_sgwb_plot()
