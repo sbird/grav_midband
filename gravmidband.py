@@ -65,11 +65,10 @@ class Sensitivity:
         """Root power spectral density in Hz^{-1/2}"""
         raise NotImplementedError
 
-    def downsample(self, nsamples, freq, psd):
+    def downsample(self, newfreq, freq, psd):
         """Down-sample a sensitivity curve to a lower desired number of bins."""
         intp = scipy.interpolate.interp1d(np.log(freq), np.log(psd))
-        jump = int(np.size(freq)/nsamples)
-        return freq[::jump], np.exp(intp(np.log(freq[::jump])))
+        return np.exp(intp(newfreq))
 
 class LISASensitivity(Sensitivity):
     """LISA sensitivity curve as a function of frequency
@@ -145,16 +144,18 @@ class SatelliteSensitivity(Sensitivity):
             #It is derived by requiring that the strain sensitivity be at 2x10^-23 /Hz^1/2.
             self.Sx = 3.e-18**2
         self.satfreq = np.logspace(self.fmin, self.fmax, int(self.nsamples_per_dec * (self.fmax - self.fmin)))
+        if self.extdata is not None:
+            self.extdata = self.downsample(self.satfreq, self.extdata[:,0], self.extdata[:,1])
 
     def PSD(self):
         """Get the root power spectral density in Hz^[-1/2]"""
-        if self.extdata is not None:
-            return self.extdata[:,0], self.extdata[:,1]
         return self.satfreq, self.noisepsd(self.satfreq)
 
     def noisepsd(self, freq):
         """The root power spectral density computed analytically from
         https://arxiv.org/abs/gr-qc/9909080 or eq. 2 of 1512.02076 in Hz^(-1/2)."""
+        if self.extdata is not None:
+            return self.extdata
         RR = np.sqrt(self.transfer(2 * math.pi * freq / self.light))
         hf2 = self.Sx / self.L0**2 + self.Sa/ (2 * math.pi * freq)**4 / self.L0**2 * ( 1 + 1.e-4 / freq)
         return 2 / RR * np.sqrt(hf2)
@@ -191,8 +192,11 @@ class LIGOSensitivity(Sensitivity):
         #self.aligointp = scipy.interpolate.interp1d(self.aligo[:,0], self.aligo[:,1])
         #Convert length to seconds
         self.length *= 3.154e7
-        nsample = (np.log10(self.aligo[-1,0]) - np.log10(self.aligo[0,0])) * self.nsamples_per_dec
-        self.ligofreq, self.ligopsd = self.downsample(nsample, self.aligo[:,0], self.aligo[:,1])
+        fmin = np.log10(self.aligo[0,0])
+        fmax = np.log10(self.aligo[-1,0])
+        nsample = (fmax - fmin) * self.nsamples_per_dec
+        self.ligofreq = np.logspace(fmin, fmax, nsample)
+        self.ligopsd = self.downsample(self.ligofreq, self.aligo[:,0], self.aligo[:,1])
 
     def PSD(self):
         """Get the root power spectral density in Hz^[-1/2]"""
