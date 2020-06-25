@@ -36,6 +36,9 @@ class Sensitivity:
     def __init__(self):
         self.hub = ((67.9 * ureg('km/s/Mpc')).to("1/s").magnitude)
         self.length = 1
+        #Equal numbers of samples per frequency decade, so that experiments are equally weighted
+        #per unit log(frequency)
+        self.nsamples_per_dec = 10
 
     def omegadens(self):
         """This is the omega_gw that would match
@@ -61,6 +64,12 @@ class Sensitivity:
     def PSD(self):
         """Root power spectral density in Hz^{-1/2}"""
         raise NotImplementedError
+
+    def downsample(self, nsamples, freq, psd):
+        """Down-sample a sensitivity curve to a lower desired number of bins."""
+        intp = scipy.interpolate.interp1d(np.log(freq), np.log(psd))
+        jump = int(np.size(freq)/nsamples)
+        return freq[::jump], np.exp(intp(np.log(freq[::jump])))
 
 class LISASensitivity(Sensitivity):
     """LISA sensitivity curve as a function of frequency
@@ -135,9 +144,6 @@ class SatelliteSensitivity(Sensitivity):
             #This number is not in the DECIGO 2017 paper.
             #It is derived by requiring that the strain sensitivity be at 2x10^-23 /Hz^1/2.
             self.Sx = 3.e-18**2
-        #Equal numbers of samples per frequency decade, so that satellites are equally weighted
-        #per unit log(frequency)
-        self.nsamples_per_dec = 10
         self.satfreq = np.logspace(self.fmin, self.fmax, int(self.nsamples_per_dec * (self.fmax - self.fmin)))
 
     def PSD(self):
@@ -185,13 +191,15 @@ class LIGOSensitivity(Sensitivity):
         #self.aligointp = scipy.interpolate.interp1d(self.aligo[:,0], self.aligo[:,1])
         #Convert length to seconds
         self.length *= 3.154e7
+        nsample = (np.log10(self.aligo[-1,0]) - np.log10(self.aligo[0,0])) * self.nsamples_per_dec
+        self.ligofreq, self.ligopsd = self.downsample(nsample, self.aligo[:,0], self.aligo[:,1])
 
     def PSD(self):
         """Get the root power spectral density in Hz^[-1/2]"""
         #The input data is in strain power spectral density noise amplitude.
         #The (dimensionless) characteristic strain is
         #charstrain = np.sqrt(self.aligo[:,0]) * self.aligo[:,1]
-        return self.aligo[:,0], self.aligo[:,1]
+        return self.ligofreq, self.ligopsd
 
 class SGWBExperiment:
     """Helper class to hold pre-computed parts of the experimental data,
@@ -200,7 +208,6 @@ class SGWBExperiment:
         self.cstring = cstring
         self.sensitivity = sensitivity
         self.freq, self.psd = sensitivity.omegadens()
-        self.freq, self.psd = self.downsample(nsamples, self.freq, self.psd)
         self.bbh_singleamp = binarybh.OmegaGW(self.freq, Norm=1)
         self.mockdata = self.cosmicstringmodel(trueparams[0])
         self.mockdata += self.bhbinarymerger(trueparams[1])
@@ -214,12 +221,6 @@ class SGWBExperiment:
         if imribh is not None:
             self.imri_singleamp = imribh.OmegaGW(self.freq, Norm = 1)
             self.mockdata += self.imri_singleamp * trueparams[2]
-
-    def downsample(self, nsamples, freq, psd):
-        """Down-sample a sensitivity curve to a lower desired number of bins."""
-        intp = scipy.interpolate.interp1d(np.log(freq), np.log(psd))
-        jump = int(np.size(freq)/nsamples)
-        return freq[::jump], np.exp(intp(np.log(freq[::jump])))
 
     def cosmicstringmodel(self, Gmu):
         """The cosmic string SGWB model."""
