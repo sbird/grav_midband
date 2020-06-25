@@ -801,7 +801,7 @@ class PhaseTransition:
         Ts is in GeV and can have a variety of values."""
         #Eyeballing the right panel of Figure 17 of 1809.08242 gives alpha = (10 R_*)^0.8
         cRs = alpha**(1/0.8) / 10.
-        return self.OmegaSW0(f, cRs, Ts, alpha)
+        return self.OmegaSW0(f, cRs, Ts, alpha) + self.OmegaTB0(f, cRs, Ts, alpha)
 
 def test_cs():
     """Simple test routine to check the cosmic string model matches the notebook"""
