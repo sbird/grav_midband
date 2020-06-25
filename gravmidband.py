@@ -68,7 +68,7 @@ class Sensitivity:
     def downsample(self, newfreq, freq, psd):
         """Down-sample a sensitivity curve to a lower desired number of bins."""
         intp = scipy.interpolate.interp1d(np.log(freq), np.log(psd))
-        return np.exp(intp(newfreq))
+        return np.exp(intp(np.log(newfreq)))
 
 class LISASensitivity(Sensitivity):
     """LISA sensitivity curve as a function of frequency
