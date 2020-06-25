@@ -337,9 +337,9 @@ class Likelihoods:
                 return -np.inf
         elif self.phase is not None:
             #Phase transition energy
-            if params[0] > 1e8:
+            if params[0] > 8:
                 return -np.inf
-            if params[0] < 1e-3:
+            if params[0] < -3:
                 return -np.inf
             #alpha
             if params[3] > 10:
