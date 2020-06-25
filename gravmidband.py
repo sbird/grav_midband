@@ -137,7 +137,7 @@ class SatelliteSensitivity(Sensitivity):
             self.Sx = 3.e-18**2
         #Equal numbers of samples per frequency decade, so that satellites are equally weighted
         #per unit log(frequency)
-        self.nsamples_per_dec = 20
+        self.nsamples_per_dec = 10
         self.satfreq = np.logspace(self.fmin, self.fmax, int(self.nsamples_per_dec * (self.fmax - self.fmin)))
 
     def PSD(self):
