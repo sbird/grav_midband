@@ -344,7 +344,7 @@ class Likelihoods:
                 return -np.inf
             #alpha: upper limit set by plausible physical values,
             #lower limit just something slightly above zero.
-            if params[3] > 4:
+            if params[3] > 2:
                 return -np.inf
             if params[3] < 1e-6:
                 return -np.inf
