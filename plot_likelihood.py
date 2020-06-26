@@ -6,11 +6,14 @@ import getdist as gd
 import getdist.plots as gdp
 matplotlib.use('PDF')
 
-def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None):
+def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None, string=True):
     """Make a getdist plot"""
     samples = np.loadtxt(chainfile)
     ticks = {}
-    pnames = [ r"G\mu", r"BBH rate", r"IMBH rate"]
+    if string:
+        pnames = [ r"$G\mu$", r"BBH rate", r"IMBH rate"]
+    else:
+        pnames = [ r"$T_*$", r"BBH rate", r"IMBH rate", r"$\alpha$"]
     prange = None
     if ranges is not None:
         prange = {pnames[i] : ranges[i] for i in range(len(pnames))}
@@ -27,8 +30,12 @@ def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None):
     subplot_instance.triangle_plot([posterior_MCsamples], filled=True)
 #     colour_array = np.array(['black', 'red', 'magenta', 'green', 'green', 'purple', 'turquoise', 'gray', 'red', 'blue'])
     #Ticks we want to show for each parameter
-    ticks = {pnames[0]: [np.log(1e-20), np.log(1e-17), np.log(1e-15)]}
-    ticklabels = {pnames[0] : [r"$10^{-20}$", r"$10^{-17}$", r"$10^{-15}$"]}
+    if string:
+        ticks = {pnames[0]: [np.log(1e-20), np.log(1e-17), np.log(1e-15)]}
+        ticklabels = {pnames[0] : [r"$10^{-20}$", r"$10^{-17}$", r"$10^{-15}$"]}
+    #else:
+        #ticks = {pnames[0]: [np.log(1e-20), np.log(1e-17), np.log(1e-15)]}
+        #ticklabels = {pnames[0] : [r"$10^{-20}$", r"$10^{-17}$", r"$10^{-15}$"]}
     for pi in range(samples.shape[1]):
         for pi2 in range(pi + 1):
             #Place horizontal and vertical lines for the true point
@@ -44,6 +51,14 @@ def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None):
     plt.savefig(savefile)
 
 if __name__ == "__main__":
+    #For PT
+    true_vals = [0, 56., 0.01, 0]
+    #ranges
+    ranges = [[-3, 8], [0, 100], [0,1], [1e-6,10]]
+    make_plot("samples_ligo_lisa_phase_bbh.txt", "like_ligo_lisa_phase_bbh.pdf", true_parameter_values = true_vals, ranges=ranges)
+    make_plot("samples_ligo_lisa_tiango_phase_bbh.txt", "like_ligo_lisa_tiango_phase_bbh.pdf", true_parameter_values = true_vals, ranges=ranges)
+
+    #For strings
     true_vals = [0, 56., 0.01]
     #ranges
     ranges = [[-50, np.log(2e-13)], [0, 100], [0,1]]
