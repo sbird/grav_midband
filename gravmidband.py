@@ -336,13 +336,15 @@ class Likelihoods:
             if params[0] < -80:
                 return -np.inf
         elif self.phase is not None:
-            #Phase transition energy
-            if params[0] > 8:
+            #Phase transition energy: lower limit so that it lies inside the LISA band
+            #Upper limit so it lies within LIGO band
+            if params[0] > 6:
                 return -np.inf
-            if params[0] < -3:
+            if params[0] < -1:
                 return -np.inf
-            #alpha
-            if params[3] > 10:
+            #alpha: upper limit set by plausible physical values,
+            #lower limit just something slightly above zero.
+            if params[3] > 4:
                 return -np.inf
             if params[3] < 1e-6:
                 return -np.inf
