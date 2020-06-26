@@ -34,7 +34,7 @@ def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None, stri
         ticks = {pnames[0]: [np.log(1e-20), np.log(1e-17), np.log(1e-15)]}
         ticklabels = {pnames[0] : [r"$10^{-20}$", r"$10^{-17}$", r"$10^{-15}$"]}
     else:
-        ticks = {pnames[0]: [0, np.log(1e2), np.log(1e4), np.log(1e6)]
+        ticks = {pnames[0]: [0, np.log(1e2), np.log(1e4), np.log(1e6)],
                  pnames[3]: [0, 0.2, 0.4, 0.6, 0.8, 1.0]}
         ticklabels = {pnames[0] : [r"$1$", r"$10^{2}$", r"$10^{4}$", r"$10^{6}$"]}
 
