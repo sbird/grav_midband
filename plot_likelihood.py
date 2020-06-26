@@ -33,9 +33,9 @@ def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None, stri
     if string:
         ticks = {pnames[0]: [np.log(1e-20), np.log(1e-17), np.log(1e-15)]}
         ticklabels = {pnames[0] : [r"$10^{-20}$", r"$10^{-17}$", r"$10^{-15}$"]}
-    #else:
-        #ticks = {pnames[0]: [np.log(1e-20), np.log(1e-17), np.log(1e-15)]}
-        #ticklabels = {pnames[0] : [r"$10^{-20}$", r"$10^{-17}$", r"$10^{-15}$"]}
+    else:
+        ticks = {pnames[0]: [0, np.log(1e2), np.log(1e4), np.log(1e6)]}
+        ticklabels = {pnames[0] : [r"$1$", r"$10^{2}$", r"$10^{4}$", r"$10^{6}$"]}
     for pi in range(samples.shape[1]):
         for pi2 in range(pi + 1):
             #Place horizontal and vertical lines for the true point
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     #For PT
     true_vals = [0, 56., 0.01, 0]
     #ranges
-    ranges = [[-1, 6], [0, 100], [0,1], [1e-6,2]]
+    ranges = [[-1, 13.8], [0, 100], [0,1], [1e-6,2]]
     make_plot("samples_ligo_lisa_phase_bbh.txt", "like_ligo_lisa_phase_bbh.pdf", true_parameter_values = true_vals, ranges=ranges, string=False)
     make_plot("samples_ligo_lisa_tiango_phase_bbh.txt", "like_ligo_lisa_tiango_phase_bbh.pdf", true_parameter_values = true_vals, ranges=ranges, string=False)
 
