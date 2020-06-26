@@ -57,6 +57,7 @@ if __name__ == "__main__":
     ranges = [[-1, 13.8], [0, 100], [0,1], [1e-6,2]]
     make_plot("samples_ligo_lisa_phase_bbh.txt", "like_ligo_lisa_phase_bbh.pdf", true_parameter_values = true_vals, ranges=ranges, string=False)
     make_plot("samples_ligo_lisa_tiango_phase_bbh.txt", "like_ligo_lisa_tiango_phase_bbh.pdf", true_parameter_values = true_vals, ranges=ranges, string=False)
+    make_plot("samples_ligo_lisa_decigo_phase_bbh.txt", "like_ligo_lisa_decigo_phase_bbh.pdf", true_parameter_values = true_vals, ranges=ranges, string=False)
 
     #For strings
     true_vals = [0, 56., 0.01]
