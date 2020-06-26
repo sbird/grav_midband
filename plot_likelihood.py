@@ -13,7 +13,7 @@ def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None, stri
     if string:
         pnames = [ r"$G\mu$", r"BBH rate", r"IMBH rate"]
     else:
-        pnames = [ r"$T_*$", r"BBH rate", r"IMBH rate", r"$\alpha$"]
+        pnames = [ r"$T_s$", r"BBH rate", r"IMBH rate", r"$\alpha$"]
     prange = None
     if ranges is not None:
         prange = {pnames[i] : ranges[i] for i in range(len(pnames))}
