@@ -128,8 +128,8 @@ def make_pt_plot():
     #omegacs = csgw.OmegaGW(freqs, Ts=100)
     #plt.loglog(freqs, omegacs, "--", color="red", label=r"PT: $T_* = 100 \;\mathrm{GeV}$")
 
-    omegacs = csgw.OmegaGW(freqs, Ts=0.01)
-    plt.loglog(freqs, omegacs, ":", color="grey", label=r"PT: $T_* = 10^{-2} \;\mathrm{GeV}$")
+    omegacs = csgw.OmegaGW(freqs, Ts=0.1)
+    plt.loglog(freqs, omegacs, ":", color="grey", label=r"PT: $T_* = 10^{-1} \;\mathrm{GeV}$")
 
     omegacs = csgw.OmegaGW(freqs, Ts=1e4)
     plt.loglog(freqs, omegacs, "-", color="brown", label=r"PT: $T_* = 10^{4} \;\mathrm{GeV}$")
