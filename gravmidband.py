@@ -875,3 +875,6 @@ if __name__=="__main__":
     #LISA+TianGo with phase transition
     like = Likelihoods(imri=True, phase=True, strings=False, ligo = True, satellites=("lisa", "tiango"))
     like.do_sampling(savefile = "samples_ligo_lisa_tiango_phase_bbh.txt")
+    #LISA+DECIGO with phase transition
+    like = Likelihoods(imri=True, phase=True, strings=False, ligo = True, satellites=("lisa", "bdecigo"))
+    like.do_sampling(savefile = "samples_ligo_lisa_decigo_phase_bbh.txt")
