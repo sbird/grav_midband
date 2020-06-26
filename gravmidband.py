@@ -734,7 +734,7 @@ class CosmicStringGWB:
         #Add extra bins to extend the table to high k, low frequency
         lnewlf = np.log10(freq[0]/31)
         lnewhf = np.log10(freq[-1]*1.02)
-        nsamp = int((lnewhf - lnewlf) * 6)
+        nsamp = int((lnewhf - lnewlf) * 3)
         fextended = np.logspace(lnewlf, lnewhf, nsamp)
         omegagmk1 = np.array([self.OmegaGWMk(Gmu, ff, 1) for ff in fextended])
         omintp = scipy.interpolate.interp1d(np.log(fextended), np.log(omegagmk1))
