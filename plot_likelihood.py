@@ -36,7 +36,8 @@ def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None, stri
     else:
         ticks = {pnames[0]: [0, np.log(1e2), np.log(1e4), np.log(1e6)],
                  pnames[3]: [0, 0.2, 0.4, 0.6, 0.8, 1.0]}
-        ticklabels = {pnames[0] : [r"$1$", r"$10^{2}$", r"$10^{4}$", r"$10^{6}$"]}
+        ticklabels = {pnames[0] : [r"$1$", r"$10^{2}$", r"$10^{4}$", r"$10^{6}$"],
+                      pnames[3]: ["0", "0.2", "0.4", "0.6", "0.8", "1.0"]}
 
     for pi in range(samples.shape[1]):
         for pi2 in range(pi + 1):
