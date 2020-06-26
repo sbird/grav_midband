@@ -122,16 +122,16 @@ def make_pt_plot():
     freqs = np.logspace(-7, 4, 50)
 
     csgw = gravmidband.PhaseTransition()
-    omegacs = csgw.OmegaGW(freqs, Ts=1)
+    omegacs = csgw.OmegaGW(freqs, Ts=1, alpha=0.3)
     plt.loglog(freqs, omegacs, "-.", color="blue", label=r"PT: $T_* = 1 \;\mathrm{GeV}$")
 
     #omegacs = csgw.OmegaGW(freqs, Ts=100)
     #plt.loglog(freqs, omegacs, "--", color="red", label=r"PT: $T_* = 100 \;\mathrm{GeV}$")
 
-    omegacs = csgw.OmegaGW(freqs, Ts=0.1)
-    plt.loglog(freqs, omegacs, ":", color="grey", label=r"PT: $T_* = 10^{-1} \;\mathrm{GeV}$")
+    #omegacs = csgw.OmegaGW(freqs, Ts=0.1)
+    #plt.loglog(freqs, omegacs, ":", color="grey", label=r"PT: $T_* = 10^{-1} \;\mathrm{GeV}$")
 
-    omegacs = csgw.OmegaGW(freqs, Ts=1e4)
+    omegacs = csgw.OmegaGW(freqs, Ts=1e4, alpha=0.3)
     plt.loglog(freqs, omegacs, "-", color="brown", label=r"PT: $T_* = 10^{4} \;\mathrm{GeV}$")
 
     omegacs = csgw.OmegaGW(freqs, Ts=1e4, alpha=0.1)
@@ -140,8 +140,11 @@ def make_pt_plot():
     #omegacs = csgw.OmegaGW(freqs, Ts=1e4, alpha=10)
     #plt.loglog(freqs, omegacs, "-", color="orange", label=r"PT: $\alpha=10 T_* = 10^{4} \;\mathrm{GeV}$")
 
-    omegacs = csgw.OmegaGW(freqs, Ts=1e6)
-    plt.loglog(freqs, omegacs, "-", color="green", label=r"PT: $T_* = 10^{6} \;\mathrm{GeV}$")
+    #omegacs = csgw.OmegaGW(freqs, Ts=1e5, alpha=0.3)
+    #plt.loglog(freqs, omegacs, "-", color="green", label=r"PT: $T_* = 10^{5} \;\mathrm{GeV}$")
+
+    #omegacs = csgw.OmegaGW(freqs, Ts=1e6, alpha=1.5)
+    #plt.loglog(freqs, omegacs, "-", color="green", label=r"PT: $T_* = 10^{6} \;\mathrm{GeV}$")
 
     #emri = gravmidband.EMRIGWB()
     #omegaemri = emri.OmegaGW(freqs)
