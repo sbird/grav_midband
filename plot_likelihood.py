@@ -68,3 +68,4 @@ if __name__ == "__main__":
     ranges = [[-50, np.log(2e-13)], [0, 100], [0,1]]
     make_plot("samples_ligo_lisa_string_bbh.txt", "like_ligo_lisa_string_bbh.pdf", true_parameter_values = true_vals, ranges=ranges)
     make_plot("samples_ligo_lisa_tiango_string_bbh.txt", "like_ligo_lisa_tiango_string_bbh.pdf", true_parameter_values = true_vals, ranges=ranges)
+    make_plot("samples_ligo_lisa_decigo_string_bbh.txt", "like_ligo_lisa_decigo_string_bbh.pdf", true_parameter_values = true_vals, ranges=ranges)
