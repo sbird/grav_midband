@@ -36,17 +36,17 @@ def make_sgwb_plot():
     for sat in ("lisa", "tiango", "bdecigo"):
         ss = gravmidband.SatelliteSensitivity(satellite = sat)
         sff, spo = ss.omegadens()
-        plt.loglog(sff, spo, "--", label=sat)
+        plt.loglog(sff, spo, "--", label=sat.upper())
 
     freqs = np.logspace(-7, 4, 50)
 
-    csgw = gravmidband.CosmicStringGWB()
-    omegacs = csgw.OmegaGW(freqs, Gmu=1.e-16)
-    plt.loglog(freqs, omegacs, "-.", color="blue", label=r"CS: $G\mu = 10^{-16}$")
+    #csgw = gravmidband.CosmicStringGWB()
+    #omegacs = csgw.OmegaGW(freqs, Gmu=1.e-16)
+    #plt.loglog(freqs, omegacs, "-.", color="blue", label=r"CS: $G\mu = 10^{-16}$")
 
     bbh = gravmidband.BinaryBHGWB()
     omegabbh = bbh.OmegaGW(freqs)
-    plt.loglog(freqs, omegabbh, ":", color="red", label="Binary Black holes")
+    plt.loglog(freqs, omegabbh, "-.", color="red", label="SMBBH")
 
     #emri = gravmidband.EMRIGWB()
     #omegaemri = emri.OmegaGW(freqs)
@@ -54,12 +54,12 @@ def make_sgwb_plot():
 
     imri = gravmidband.IMRIGWB()
     omegaimri = imri.OmegaGW(freqs)
-    plt.loglog(freqs, omegaimri, ":", color="purple", label="IMRI mergers")
+    plt.loglog(freqs, omegaimri, ":", color="purple", label="IMRI")
 
-    plt.legend(loc="upper left")
+    plt.legend(loc="upper left", ncol=2)
     plt.xlabel("f (Hz)")
     plt.ylabel(r"$\Omega_{GW}$")
-    plt.ylim(1e-20, 1)
+    plt.ylim(1e-17, 10)
     plt.tight_layout()
     plt.savefig("sgwb.pdf")
 
