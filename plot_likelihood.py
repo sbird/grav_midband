@@ -26,7 +26,7 @@ def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None, stri
         for j in (0.16, 1-0.16, 0.025, 1-0.025):
             post = posterior_MCsamples.confidence(i, j)
             if pn == r"G\mu":
-                post = exp(post)
+                post = np.exp(post)
             strr += str(round(post,5)) + " "
         print(strr)
     subplot_instance = gdp.getSubplotPlotter()
