@@ -27,7 +27,7 @@ def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None, stri
             post = posterior_MCsamples.confidence(i, j)
             if pn == r"G\mu":
                 post = np.exp(post)
-            strr += str(round(post,5)) + " "
+            strr += " %g" % post
         print(strr)
     subplot_instance = gdp.getSubplotPlotter()
     subplot_instance.triangle_plot([posterior_MCsamples], filled=True)
