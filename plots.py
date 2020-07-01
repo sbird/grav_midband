@@ -36,17 +36,17 @@ def make_sgwb_plot():
     for sat in ("lisa", "tiango", "bdecigo"):
         ss = gravmidband.SatelliteSensitivity(satellite = sat)
         sff, spo = ss.omegadens()
-        plt.loglog(sff, spo, "--", label=sat)
+        plt.loglog(sff, spo, "--", label=sat.upper())
 
     freqs = np.logspace(-7, 4, 50)
 
-    csgw = gravmidband.CosmicStringGWB()
-    omegacs = csgw.OmegaGW(freqs, Gmu=1.e-16)
-    plt.loglog(freqs, omegacs, "-.", color="blue", label=r"CS: $G\mu = 10^{-16}$")
+    #csgw = gravmidband.CosmicStringGWB()
+    #omegacs = csgw.OmegaGW(freqs, Gmu=1.e-16)
+    #plt.loglog(freqs, omegacs, "-.", color="blue", label=r"CS: $G\mu = 10^{-16}$")
 
     bbh = gravmidband.BinaryBHGWB()
     omegabbh = bbh.OmegaGW(freqs)
-    plt.loglog(freqs, omegabbh, ":", color="red", label="Binary Black holes")
+    plt.loglog(freqs, omegabbh, "-.", color="red", label="SMBBH")
 
     #emri = gravmidband.EMRIGWB()
     #omegaemri = emri.OmegaGW(freqs)
@@ -54,12 +54,12 @@ def make_sgwb_plot():
 
     imri = gravmidband.IMRIGWB()
     omegaimri = imri.OmegaGW(freqs)
-    plt.loglog(freqs, omegaimri, ":", color="purple", label="IMRI mergers")
+    plt.loglog(freqs, omegaimri, ":", color="purple", label="IMRI")
 
-    plt.legend(loc="upper left")
+    plt.legend(loc="upper left", ncol=2)
     plt.xlabel("f (Hz)")
     plt.ylabel(r"$\Omega_{GW}$")
-    plt.ylim(1e-20, 1)
+    plt.ylim(1e-17, 10)
     plt.tight_layout()
     plt.savefig("sgwb.pdf")
 
@@ -73,31 +73,31 @@ def make_string_plot():
     #plt.loglog(saff, sapo, "-", color="green", label="LISA")
     plt.loglog(goff, gopo, "-", color="black", label="LIGO")
 
-    for sat in ("lisa", "tiango", "bdecigo"):
+    for sat in ("lisa", "tiango"):
         ss = gravmidband.SatelliteSensitivity(satellite = sat)
         sff, spo = ss.omegadens()
-        plt.loglog(sff, spo, "--", label=sat)
+        plt.loglog(sff, spo, "--", label=sat.upper())
 
     freqs = np.logspace(-7, 4, 50)
 
     csgw = gravmidband.CosmicStringGWB()
     omegacs = csgw.OmegaGW(freqs, Gmu=1.e-16)
-    plt.loglog(freqs, omegacs, "-.", color="blue", label=r"CS: $G\mu = 10^{-16}$")
+    plt.loglog(freqs, omegacs, "-.", color="pink", label=r"$G\mu = 10^{-16}$")
 
-    omegacs = csgw.OmegaGW(freqs, Gmu=1.e-17)
-    plt.loglog(freqs, omegacs, "--", color="red", label=r"CS: $G\mu = 10^{-17}$")
+    #omegacs = csgw.OmegaGW(freqs, Gmu=1.e-17)
+    #plt.loglog(freqs, omegacs, "--", color="red", label=r"$G\mu = 10^{-17}$")
 
     omegacs = csgw.OmegaGW(freqs, Gmu=1.e-18)
-    plt.loglog(freqs, omegacs, ":", color="grey", label=r"CS: $G\mu = 10^{-18}$")
+    plt.loglog(freqs, omegacs, ":", color="grey", label=r"$G\mu = 10^{-18}$")
 
     omegacs = csgw.OmegaGW(freqs, Gmu=1.e-19)
-    plt.loglog(freqs, omegacs, "-", color="brown", label=r"CS: $G\mu = 10^{-19}$")
+    plt.loglog(freqs, omegacs, "-", color="brown", label=r"$G\mu = 10^{-19}$")
 
     #emri = gravmidband.EMRIGWB()
     #omegaemri = emri.OmegaGW(freqs)
     #plt.loglog(freqs, omegaemri, ":", color="gold", label="EMRI mergers")
 
-    plt.legend(loc="upper left")
+    plt.legend(loc="upper left", ncol=2)
     plt.xlabel("f (Hz)")
     plt.ylabel(r"$\Omega_{GW}$")
     plt.ylim(1e-20, 1)
@@ -117,13 +117,13 @@ def make_pt_plot():
     for sat in ("lisa", "tiango"):
         ss = gravmidband.SatelliteSensitivity(satellite = sat)
         sff, spo = ss.omegadens()
-        plt.loglog(sff, spo, "--", label=sat)
+        plt.loglog(sff, spo, "--", label=sat.upper())
 
     freqs = np.logspace(-7, 4, 50)
 
     csgw = gravmidband.PhaseTransition()
     omegacs = csgw.OmegaGW(freqs, Ts=1, alpha=0.3)
-    plt.loglog(freqs, omegacs, "-.", color="blue", label=r"PT: $T_* = 1 \;\mathrm{GeV}$")
+    plt.loglog(freqs, omegacs, "-.", color="pink", label=r"$T_* = 1\;\alpha=0.3$")
 
     #omegacs = csgw.OmegaGW(freqs, Ts=100)
     #plt.loglog(freqs, omegacs, "--", color="red", label=r"PT: $T_* = 100 \;\mathrm{GeV}$")
@@ -132,10 +132,10 @@ def make_pt_plot():
     #plt.loglog(freqs, omegacs, ":", color="grey", label=r"PT: $T_* = 10^{-1} \;\mathrm{GeV}$")
 
     omegacs = csgw.OmegaGW(freqs, Ts=1e4, alpha=0.3)
-    plt.loglog(freqs, omegacs, "-", color="brown", label=r"PT: $T_* = 10^{4} \;\mathrm{GeV}$")
+    plt.loglog(freqs, omegacs, "-", color="brown", label=r"$T_* = 10^{4}\;\alpha=0.3$")
 
     omegacs = csgw.OmegaGW(freqs, Ts=1e4, alpha=0.1)
-    plt.loglog(freqs, omegacs, ":", color="pink", label=r"PT: $\alpha=0.1 T_* = 10^{4} \;\mathrm{GeV}$ ")
+    plt.loglog(freqs, omegacs, ":", color="grey", label=r"$T_* = 10^{4}\;\alpha=0.1$ ")
 
     #omegacs = csgw.OmegaGW(freqs, Ts=1e4, alpha=10)
     #plt.loglog(freqs, omegacs, "-", color="orange", label=r"PT: $\alpha=10 T_* = 10^{4} \;\mathrm{GeV}$")
@@ -153,7 +153,7 @@ def make_pt_plot():
     plt.legend(loc="upper left", ncol=2)
     plt.xlabel("f (Hz)")
     plt.ylabel(r"$\Omega_{GW}$")
-    plt.ylim(1e-20, 100)
+    plt.ylim(1e-20, 1e-2)
     plt.tight_layout()
     plt.savefig("phasetransition.pdf")
 
