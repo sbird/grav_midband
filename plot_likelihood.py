@@ -24,7 +24,10 @@ def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None, stri
     for i, pn in enumerate(pnames):
         strr = pn+" 1-sigma, 2-sigma: "
         for j in (0.16, 1-0.16, 0.025, 1-0.025):
-            strr += str(round(posterior_MCsamples.confidence(i, j),5)) + " "
+            post = posterior_MCsamples.confidence(i, j)
+            if pn == r"G\mu":
+                post = exp(post)
+            strr += str(round(post,5)) + " "
         print(strr)
     subplot_instance = gdp.getSubplotPlotter()
     subplot_instance.triangle_plot([posterior_MCsamples], filled=True)
