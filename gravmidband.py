@@ -515,13 +515,13 @@ class BinaryBHGWB:
         #From z= 0.01 to 20.
         zmax = 10
         #zmin: exclude binaries that are at zero redshift as they are resolved, even with current LIGO.
-        zmin = 1.1
+        zmin = 1.0
         #m1 has a power law weight. m2 is uniformly sampled.
-        ominsp = lambda zzp1, m2, m1 : self.Rsfrnormless(zzp1) / HubbleEz(zzp1) * self.dEdfsInsp(self.mchirp(m1, m2), ff*zzp1) * m1**alpha
-        ommerg = lambda zzp1, m2, m1 : self.Rsfrnormless(zzp1) / HubbleEz(zzp1) * self.dEdfsMergV2(m1, m2, ff*zzp1) * m1**alpha
+        ominsp = lambda zzp1, m2, m1 : self.Rsfrnormless(zzp1) / HubbleEz(zzp1) * self.dEdfsInsp(self.mchirp(m1, m2), ff*zzp1) * m1**alpha / zzp1
+        ommerg = lambda zzp1, m2, m1 : self.Rsfrnormless(zzp1) / HubbleEz(zzp1) * self.dEdfsMergV2(m1, m2, ff*zzp1) * m1**alpha / zzp1
         #If we are always in the inspiral band the integrals become separable.
         if zmax < self.fmergerV2(50+m2max)/ff:
-            zzfreq = lambda zzp1: self.Rsfrnormless(zzp1) / HubbleEz(zzp1) * 1./3.*(math.pi**2*self.GG**2/(ff*zzp1))**(1/3)*self.ms**(5./3)
+            zzfreq = lambda zzp1: self.Rsfrnormless(zzp1) / HubbleEz(zzp1) * 1./3.*(math.pi**2*self.GG**2/(ff*zzp1))**(1/3)*self.ms**(5./3) / zzp1
             omegagwz, _ = scipy.integrate.quad(zzfreq, zmin, zmax)
             # The m2 integral can be done analytically.
             mm1int = lambda m1: 0.3 * m1**(alpha+1) * ((m1+m2max)**(2./3)*(2*m2max-3*m1)-(m1+m2min)**(2./3) * (2*m2min-3*m1))
@@ -548,7 +548,7 @@ class BinaryBHGWB:
         omegagw_unnormed = np.array([self._omegagwz(ff, alpha=alpha, m2min=m2min, m2max = m2max) for ff in freq])
         #See eq. 2 of 1609.03565
         freq = freq * self.ureg("Hz")
-        normfac = (Norm * self.Normunit / Hub * freq / self.ureg("speed_of_light")**2 / self.rhocrit())
+        normfac = (Norm * self.Normunit / Hub * freq / self.ureg("speed_of_light")**2 / self.rhocrit())/self.Rsfrnormless(1)
         normfac = normfac.to_base_units()
         #assert normfac.check("[]")
         return  normfac.magnitude * omegagw_unnormed
@@ -564,11 +564,11 @@ class IMRIGWB(BinaryBHGWB):
         #From z= 0.01 to 20.
         zmax = 10
         #zmin: exclude binaries that are at zero redshift as they are resolved, even with current LIGO.
-        zmin = 1.1
+        zmin = 1.0
         #m1 has a power law weight. m2 is uniformly sampled.
         #m1+m2 ~ m2 -> mchirp = m2 m1/m2^(1/3) = m2^(2/3) m1
         EInsp = lambda femit: 1./3.*(math.pi**2*self.GG**2/femit)**(1/3)*self.ms**(5./3)
-        ominsp = lambda zzp1, m2 : self.Rsfrnormless(zzp1) / HubbleEz(zzp1) * EInsp(ff*zzp1) * m2**(2/3)
+        ominsp = lambda zzp1, m2 : self.Rsfrnormless(zzp1) / HubbleEz(zzp1) * EInsp(ff*zzp1) * m2**(2/3) / zzp1
         Emergapprox = lambda m2: 1./3.*(math.pi**2*self.GG**2)**(1/3)*(self.ms**(5./3)*m2**(2/3))/self.fmergerV2(m2)
         ommerg = lambda zzp1, m2: self.Rsfrnormless(zzp1) / HubbleEz(zzp1) * Emergapprox(m2) *(ff*zzp1)**(2./3)
         #Integrated m1 dependence
