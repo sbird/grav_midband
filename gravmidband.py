@@ -333,7 +333,7 @@ class Likelihoods:
             if params[0] > np.log(2.e-11):
                 return -np.inf
             #Prevent underflow
-            if params[0] < -60:
+            if params[0] < -51:
                 return -np.inf
         elif self.phase is not None:
             #Phase transition energy: lower limit so that it lies well inside the LISA band
@@ -344,7 +344,7 @@ class Likelihoods:
                 return -np.inf
             #alpha: upper limit set by plausible physical values,
             #lower limit just something slightly above zero.
-            if params[3] > 1:
+            if params[3] > 3:
                 return -np.inf
             if params[3] < 1e-6:
                 return -np.inf
@@ -368,7 +368,7 @@ class Likelihoods:
         if self.cstring is not None:
             #Say Gmu ranges from exp(-45) - exp(-14), LIGO merger rate between 0 and 100
             #and IMRI rate from 0 to 1.
-            pr = np.array([15, 100, 0.1])
+            pr = np.array([10, 100, 0.1])
             #Priors are assumed to be in the middle.
             cent = np.array([-40, 55, 0.05])
         elif self.phase is not None:
