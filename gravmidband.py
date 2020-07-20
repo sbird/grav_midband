@@ -839,8 +839,10 @@ class PhaseTransition:
         """Total OmegaGW: this is just sound wave dropping the subdominant bubbles and turbulence following 1910.13125.
         We pick alpha = 1 as a fiducial model. It can be from 0.5 to 4 ish.
         Ts is in GeV and can have a variety of values."""
-        #Eyeballing the right panel of Figure 17 of 1809.08242 gives alpha = (10 R_*)^0.8
-        cRs = alpha**(1/0.8) / 10.
+        #Eyeballing the right panel of Figure 17 of 1809.08242 gives alpha = (10 beta/H)^0.8
+        beta = alpha**(1/0.8) / 10. * self.Hubble(Ts)
+        #Eq. 6 of 1910.13125
+        cRs = (8 * math.pi)**(1./3) / beta * np.max(self.vw, self.cs)
         return self.OmegaSW0(f, cRs, Ts, alpha) + self.OmegaTB0(f, cRs, Ts, alpha)
 
 def test_cs():
