@@ -59,7 +59,7 @@ def make_sgwb_plot():
     plt.legend(loc="upper left", ncol=2)
     plt.xlabel("f (Hz)")
     plt.ylabel(r"$\Omega_{GW}$")
-    plt.ylim(1e-17, 10)
+    plt.ylim(1e-14, 10)
     plt.tight_layout()
     plt.savefig("sgwb.pdf")
 
@@ -81,17 +81,17 @@ def make_string_plot():
     freqs = np.logspace(-7, 4, 50)
 
     csgw = gravmidband.CosmicStringGWB()
-    omegacs = csgw.OmegaGW(freqs, Gmu=1.e-16)
-    plt.loglog(freqs, omegacs, "-.", color="pink", label=r"$G\mu = 10^{-16}$")
+    omegacs = csgw.OmegaGW(freqs, Gmu=1.e-12)
+    plt.loglog(freqs, omegacs, "-.", color="pink", label=r"$G\mu = 10^{-12}$")
 
     #omegacs = csgw.OmegaGW(freqs, Gmu=1.e-17)
     #plt.loglog(freqs, omegacs, "--", color="red", label=r"$G\mu = 10^{-17}$")
 
-    omegacs = csgw.OmegaGW(freqs, Gmu=1.e-18)
-    plt.loglog(freqs, omegacs, ":", color="grey", label=r"$G\mu = 10^{-18}$")
+    omegacs = csgw.OmegaGW(freqs, Gmu=1.e-14)
+    plt.loglog(freqs, omegacs, ":", color="grey", label=r"$G\mu = 10^{-14}$")
 
-    omegacs = csgw.OmegaGW(freqs, Gmu=1.e-19)
-    plt.loglog(freqs, omegacs, "-", color="brown", label=r"$G\mu = 10^{-19}$")
+    omegacs = csgw.OmegaGW(freqs, Gmu=1.e-16)
+    plt.loglog(freqs, omegacs, "-", color="brown", label=r"$G\mu = 10^{-16}$")
 
     #emri = gravmidband.EMRIGWB()
     #omegaemri = emri.OmegaGW(freqs)
@@ -100,7 +100,7 @@ def make_string_plot():
     plt.legend(loc="upper left", ncol=2)
     plt.xlabel("f (Hz)")
     plt.ylabel(r"$\Omega_{GW}$")
-    plt.ylim(1e-20, 1)
+    plt.ylim(1e-14, 1)
     plt.tight_layout()
     plt.savefig("strings.pdf")
 
@@ -117,6 +117,8 @@ def make_pt_plot():
     for sat in ("lisa", "tiango"):
         ss = gravmidband.SatelliteSensitivity(satellite = sat)
         sff, spo = ss.omegadens()
+        #Correct for number of samples
+        spo /= np.sqrt(ss.length * sff)
         plt.loglog(sff, spo, "--", label=sat.upper())
 
     freqs = np.logspace(-7, 4, 50)
