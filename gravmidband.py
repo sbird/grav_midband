@@ -55,10 +55,7 @@ class Sensitivity:
         #is small, and underestimates it at low frequencies where it is large.
         #Since in any case by the time this forecast happens we will have
         #different detectors with a different and unknown overlap function, ignore this.
-        omegagw = 2 * math.pi**2 / 3 / self.hub**2 * ff**3 * psd**2
-        # We assume sampling at 1/32 Hz following 1903.02886
-        # and a design run of 2 years.
-        omegagw /= np.sqrt(2 * self.length * 1./32)
+        omegagw = 4 * math.pi**2 / 3 / self.hub**2 * ff**3 * psd**2
         return ff, omegagw
 
     def PSD(self):
@@ -208,10 +205,11 @@ class LIGOSensitivity(Sensitivity):
 class SGWBExperiment:
     """Helper class to hold pre-computed parts of the experimental data,
        presenting a consistent interface for different experiments."""
-    def __init__(self, binarybh, sensitivity, trueparams, imribh=None, cstring=None, phase = None, nsamples=100):
+    def __init__(self, binarybh, sensitivity, trueparams, imribh=None, cstring=None, phase = None):
         self.cstring = cstring
         self.sensitivity = sensitivity
-        self.freq, self.psd = sensitivity.omegadens()
+        self.freq, self.omegasens = sensitivity.omegadens()
+        self.length = sensitivity.length
         self.bbh_singleamp = binarybh.OmegaGW(self.freq, Norm=1)
         self.mockdata = self.cosmicstringmodel(trueparams[0])
         self.mockdata += self.bhbinarymerger(trueparams[1])
@@ -357,7 +355,7 @@ class Likelihoods:
 
         for exp in self.experiments:
             model = exp.omegamodel(cosmo = np.exp(params[0]), bbhamp = params[1], imriamp = params[2], ptalpha=ptalpha)
-            llike += - 1 * np.trapz(((model - exp.mockdata)/ exp.psd)**2, x=exp.freq)
+            llike += - 1 * exp.length * np.trapz(((model - exp.mockdata)/ exp.omegasens)**2, x=exp.freq)
             #like += ampprior * np.size(exp.freq)
         #print(np.exp(params[0]), like)
         return llike
