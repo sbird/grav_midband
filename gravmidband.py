@@ -842,7 +842,7 @@ class PhaseTransition:
         #Eyeballing the right panel of Figure 17 of 1809.08242 gives alpha = (10 beta/H)^0.8
         beta = alpha**(1/0.8) / 10. * self.Hubble(Ts)
         #Eq. 6 of 1910.13125
-        cRs = (8 * math.pi)**(1./3) / beta * np.max(self.vw, self.cs)
+        cRs = (8 * math.pi)**(1./3) / beta * np.max([self.vw, self.cs])
         return self.OmegaSW0(f, cRs, Ts, alpha) + self.OmegaTB0(f, cRs, Ts, alpha)
 
 def test_cs():
