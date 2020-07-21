@@ -156,7 +156,8 @@ class SatelliteSensitivity(Sensitivity):
             return self.extdata
         RR = self.transfer(2 * math.pi * freq / self.light)
         Poms = self.Sx /self.L0**2 * (1 + (2e-3/freq)**4 )
-        Pacc = self.Sa /self.L0**2 * (1+ (4e-4/freq)**2) * (1 + (freq/(8e-3))**4) / (2 * math.pi * freq )**4
+        #8e-3 for LISA
+        Pacc = self.Sa /self.L0**2 * (1+ (4e-4/freq)**2) * (1 + (freq/(8e-3 * 2.5e9/self.L0))**4) / (2 * math.pi * freq )**4
         Sn = (Poms + (3 + np.cos(4 * math.pi * freq * self.L0 / self.light)) * Pacc)/RR
         assert np.all(Sn > 0)
         return np.sqrt(Sn)
