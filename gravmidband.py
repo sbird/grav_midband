@@ -101,13 +101,14 @@ class SatelliteSensitivity(Sensitivity):
         self.light = 299792458
         self.extdata = None
         if satellite == "lisa":
-            self.fmax = np.log10(2.08)
-            self.fmin = np.log10(1.95e-7)
+            self.fmax = np.log10(0.5)
+            self.fmin = np.log10(5e-7)
             # The satellite arm length in m
             self.L0 = 2.5e9
-            #The acceleration noise in m^2 s^-4 /Hz
+            #See 1906.09244 eq. 2.1
+            #The acceleration noise in m^2 s^-4 /Hz (3 fm)
             self.Sa = 3.e-15**2
-            #The position noise in m^2 /Hz
+            #The position noise in m^2 /Hz (15 pm)
             self.Sx = 1.5e-11**2
         elif satellite == "tiango":
             #From Hang Yu, 6/15/20
@@ -149,17 +150,20 @@ class SatelliteSensitivity(Sensitivity):
         return self.satfreq, self.noisepsd(self.satfreq)
 
     def noisepsd(self, freq):
-        """The root power spectral density computed analytically from
-        https://arxiv.org/abs/gr-qc/9909080 or eq. 2 of 1512.02076 in Hz^(-1/2)."""
+        """The root power spectral density computed analytically from 1906.09244 .
+        See also https://arxiv.org/abs/gr-qc/9909080 or eq. 2 of 1512.02076 in Hz^(-1/2)."""
         if self.extdata is not None:
             return self.extdata
-        RR = np.sqrt(self.transfer(2 * math.pi * freq / self.light))
-        hf2 = self.Sx / self.L0**2 + self.Sa/ (2 * math.pi * freq)**4 / self.L0**2 * ( 1 + 1.e-4 / freq)
-        return 2 / RR * np.sqrt(hf2)
+        RR = self.transfer(2 * math.pi * freq / self.light)
+        Poms = self.Sx /self.L0**2 * (1 + (2e-3/freq)**4 )
+        Pacc = self.Sa /self.L0**2 * (1+ (4e-4/freq)**2) * (1 + (freq/(8e-3))**4) / (2 * math.pi * freq )**4
+        Sn = (Poms + (3 + np.cos(4 * math.pi * freq * self.L0 / self.light)) * Pacc)/RR
+        assert np.all(Sn > 0)
+        return np.sqrt(Sn)
 
     def transfer(self, w):
-        """The GW transfer function"""
-        return 8./15 / ( 1 + (w * self.L0 / 0.41 / math.pi)**2)
+        """Transfer function R(w), see eq. 2.9 of 1906.09244 and cancel the sin^2 factor and the 2 pi f / c."""
+        return 0.3 /(1 + 0.6*(w * self.L0)**2)
 
 class LIGOSensitivity(Sensitivity):
     """LIGO sensitivity curve as a function of frequency"""
