@@ -341,15 +341,15 @@ class Likelihoods:
         elif self.phase is not None:
             #Phase transition energy: lower limit so that it lies well inside the LISA band
             #Upper limit so it lies within LIGO band
-            if params[0] > np.log(1e6):
+            if params[0] > np.log(1e9):
                 return -np.inf
-            if params[0] < 0:
+            if params[0] < np.log(1e2):
                 return -np.inf
             #alpha: upper limit set by plausible physical values,
             #lower limit just something slightly above zero.
-            if params[3] > 3:
+            if params[3] > 1:
                 return -np.inf
-            if params[3] < 1e-6:
+            if params[3] < 1e-4:
                 return -np.inf
             ptalpha = params[3]
         # LIGO prior: Gaussian on BBH merger rate with central value of the true value.
@@ -375,7 +375,7 @@ class Likelihoods:
             #Priors are assumed to be in the middle.
             cent = np.array([-40, 55, 0.05])
         elif self.phase is not None:
-            pr = np.array([2, 100, 0.1, 0.2])
+            pr = np.array([10, 100, 0.1, 0.2])
             cent = np.array([2, 100, 0.1, 0.2])
         p0 = [cent+2*pr/16.*np.random.rand(len(pr))-pr/16. for _ in range(nwalkers)]
         lnk0 = np.array([self.lnlikelihood(pp) for pp in p0])
