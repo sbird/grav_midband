@@ -56,6 +56,14 @@ def make_sgwb_plot():
     omegaimri = imri.OmegaGW(freqs)
     plt.loglog(freqs, omegaimri, ":", color="purple", label="IMRI")
 
+    csgw = gravmidband.CosmicStringGWB()
+    omegacs = csgw.OmegaGW(freqs, Gmu=1.e-12)
+    plt.loglog(freqs, omegacs, "-.", color="pink", label=r"$G\mu = 10^{-12}$")
+
+    pt = gravmidband.PhaseTransition()
+    omegacs = pt.OmegaGW(freqs, Ts=1e9, alpha=0.01)
+    plt.loglog(freqs, omegacs, "-", color="brown", label=r"$T_* = 10^{8}\;\alpha=0.01$")
+
     plt.legend(loc="upper left", ncol=2)
     plt.xlabel("f (Hz)")
     plt.ylabel(r"$\Omega_{GW}$")
@@ -92,10 +100,6 @@ def make_string_plot():
 
     omegacs = csgw.OmegaGW(freqs, Gmu=1.e-16)
     plt.loglog(freqs, omegacs, "-", color="brown", label=r"$G\mu = 10^{-16}$")
-
-    #bbh = gravmidband.BinaryBHGWB()
-    #omegabbh = bbh.OmegaGW(freqs)
-    #plt.loglog(freqs, omegabbh, "-.", color="red", label="SMBBH")
 
     #emri = gravmidband.EMRIGWB()
     #omegaemri = emri.OmegaGW(freqs)
@@ -145,10 +149,6 @@ def make_pt_plot():
 
     omegacs = csgw.OmegaGW(freqs, Ts=1e5, alpha=0.01)
     plt.loglog(freqs, omegacs, ":", color="grey", label=r"$T_* = 10^{4}\;\alpha=0.01$ ")
-
-    #bbh = gravmidband.BinaryBHGWB()
-    #omegabbh = bbh.OmegaGW(freqs)
-    #plt.loglog(freqs, omegabbh, "-.", color="red", label="SMBBH")
 
     #omegacs = csgw.OmegaGW(freqs, Ts=1e4, alpha=10)
     #plt.loglog(freqs, omegacs, "-", color="orange", label=r"PT: $\alpha=10 T_* = 10^{4} \;\mathrm{GeV}$")
