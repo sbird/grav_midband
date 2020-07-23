@@ -93,6 +93,10 @@ def make_string_plot():
     omegacs = csgw.OmegaGW(freqs, Gmu=1.e-16)
     plt.loglog(freqs, omegacs, "-", color="brown", label=r"$G\mu = 10^{-16}$")
 
+    #bbh = gravmidband.BinaryBHGWB()
+    #omegabbh = bbh.OmegaGW(freqs)
+    #plt.loglog(freqs, omegabbh, "-.", color="red", label="SMBBH")
+
     #emri = gravmidband.EMRIGWB()
     #omegaemri = emri.OmegaGW(freqs)
     #plt.loglog(freqs, omegaemri, ":", color="gold", label="EMRI mergers")
@@ -124,8 +128,8 @@ def make_pt_plot():
     freqs = np.logspace(-7, 4, 50)
 
     csgw = gravmidband.PhaseTransition()
-    omegacs = csgw.OmegaGW(freqs, Ts=1, alpha=0.3)
-    plt.loglog(freqs, omegacs, "-.", color="pink", label=r"$T_* = 1\;\alpha=0.3$")
+    #omegacs = csgw.OmegaGW(freqs, Ts=1, alpha=0.3)
+    #plt.loglog(freqs, omegacs, "-.", color="pink", label=r"$T_* = 1\;\alpha=0.3$")
 
     #omegacs = csgw.OmegaGW(freqs, Ts=100)
     #plt.loglog(freqs, omegacs, "--", color="red", label=r"PT: $T_* = 100 \;\mathrm{GeV}$")
@@ -133,11 +137,18 @@ def make_pt_plot():
     #omegacs = csgw.OmegaGW(freqs, Ts=0.1)
     #plt.loglog(freqs, omegacs, ":", color="grey", label=r"PT: $T_* = 10^{-1} \;\mathrm{GeV}$")
 
-    omegacs = csgw.OmegaGW(freqs, Ts=1e4, alpha=0.3)
-    plt.loglog(freqs, omegacs, "-", color="brown", label=r"$T_* = 10^{4}\;\alpha=0.3$")
+    omegacs = csgw.OmegaGW(freqs, Ts=1e9, alpha=0.01)
+    plt.loglog(freqs, omegacs, "-", color="brown", label=r"$T_* = 10^{8}\;\alpha=0.01$")
 
-    omegacs = csgw.OmegaGW(freqs, Ts=1e4, alpha=0.1)
-    plt.loglog(freqs, omegacs, ":", color="grey", label=r"$T_* = 10^{4}\;\alpha=0.1$ ")
+    omegacs = csgw.OmegaGW(freqs, Ts=1e5, alpha=0.1)
+    plt.loglog(freqs, omegacs, "-", color="pink", label=r"$T_* = 10^{4}\;\alpha=0.1$")
+
+    omegacs = csgw.OmegaGW(freqs, Ts=1e5, alpha=0.01)
+    plt.loglog(freqs, omegacs, ":", color="grey", label=r"$T_* = 10^{4}\;\alpha=0.01$ ")
+
+    #bbh = gravmidband.BinaryBHGWB()
+    #omegabbh = bbh.OmegaGW(freqs)
+    #plt.loglog(freqs, omegabbh, "-.", color="red", label="SMBBH")
 
     #omegacs = csgw.OmegaGW(freqs, Ts=1e4, alpha=10)
     #plt.loglog(freqs, omegacs, "-", color="orange", label=r"PT: $\alpha=10 T_* = 10^{4} \;\mathrm{GeV}$")
@@ -155,7 +166,8 @@ def make_pt_plot():
     plt.legend(loc="upper left", ncol=2)
     plt.xlabel("f (Hz)")
     plt.ylabel(r"$\Omega_{GW}$")
-    plt.ylim(1e-20, 1e-2)
+    plt.ylim(1e-14, 1e-4)
+    plt.xlim(1e-6, 100)
     plt.tight_layout()
     plt.savefig("phasetransition.pdf")
 
