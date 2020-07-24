@@ -78,21 +78,29 @@ def plot_detector_fill():
     """Plot a filled region of detectors"""
     sigff = np.array([])
     sigpo = np.array([])
+    alphas = {"lisa": 0.3, "tiango": 0.2}
     for sat in ("lisa", "tiango"):
         ss = gravmidband.SatelliteSensitivity(satellite = sat)
         sff, spo = ss.omegadens()
         #Correct for number of samples
         spo /= np.sqrt(ss.length * sff)
-        sigff = np.concatenate([sigff,sff])
-        sigpo = np.concatenate([sigpo, spo])
+        plt.fill_between(sff, y1=spo, y2=1, color="grey", alpha=alphas[sat], linewidth=0)
+
+        #sigff = np.concatenate([sigff,sff])
+        #sigpo = np.concatenate([sigpo, spo])
 
     ligo = gravmidband.LIGOSensitivity()
     goff, gopo = ligo.omegadens()
     gopo /= np.sqrt(ligo.length * goff)
-    sigff = np.concatenate([sigff,goff])
-    sigpo = np.concatenate([sigpo, gopo])
+    plt.fill_between(goff, y1=gopo, y2=1, color="grey", alpha=0.5, linewidth=0)
+    plt.text(5e-4,1e-8,"LISA")
+    plt.text(0.05,1e-8,"TIANGO")
+    plt.text(30,1e-8,"LIGO")
 
-    plt.fill_between(sigff, y1=sigpo, y2=1, color="grey", alpha=0.5, linewidth=0)
+    #sigff = np.concatenate([sigff,goff])
+    #sigpo = np.concatenate([sigpo, gopo])
+
+    #plt.fill_between(sigff, y1=sigpo, y2=1, color="grey", alpha=0.5, linewidth=0)
 
 def make_foreground_plot():
     """Plot an example stochastic gravitational wave background"""
@@ -121,7 +129,7 @@ def make_foreground_plot():
 
     pt = gravmidband.PhaseTransition()
     omegacs = pt.OmegaGW(freqs, Ts=1e10, alpha=0.001)
-    plt.loglog(freqs, omegacs, "-", color="brown", label=r"PT: $T_* = 10^{10}\;\alpha=0.001$")
+    plt.loglog(freqs, omegacs, "-", color="brown", label=r"PT: $T_* = 10^{10}$ GeV $\alpha=0.001$")
 
     plt.legend(loc="upper left", ncol=2)
     plt.xlabel("f (Hz)")
@@ -186,19 +194,19 @@ def make_pt_plot():
     #plt.loglog(freqs, omegacs, ":", color="grey", label=r"PT: $T_* = 10^{-1} \;\mathrm{GeV}$")
 
     omegacs = csgw.OmegaGW(freqs, Ts=1e9, alpha=0.01)
-    plt.loglog(freqs, omegacs, "-", color="brown", label=r"$T_* = 10^{9}\;\alpha=0.01$")
+    plt.loglog(freqs, omegacs, "-", color="brown", label=r"$T_* = 10^{9}$ GeV $\alpha=0.01$")
 
     omegacs = csgw.OmegaGW(freqs, Ts=1e5, alpha=0.1)
-    plt.loglog(freqs, omegacs, "-", color="pink", label=r"$T_* = 10^{5}\;\alpha=0.1$")
+    plt.loglog(freqs, omegacs, "-", color="pink", label=r"$T_* = 10^{5}$ GeV $\alpha=0.1$")
 
     omegacs = csgw.OmegaGW(freqs, Ts=1e5, alpha=0.01)
-    plt.loglog(freqs, omegacs, ":", color="grey", label=r"$T_* = 10^{5}\;\alpha=0.01$ ")
+    plt.loglog(freqs, omegacs, ":", color="grey", label=r"$T_* = 10^{5}$ GeV $\alpha=0.01$")
 
     #omegacs = csgw.OmegaGW(freqs, Ts=1e4, alpha=10)
     #plt.loglog(freqs, omegacs, "-", color="orange", label=r"PT: $\alpha=10 T_* = 10^{4} \;\mathrm{GeV}$")
 
     omegacs = csgw.OmegaGW(freqs, Ts=1e9, alpha=0.1)
-    plt.loglog(freqs, omegacs, "-", color="green", label=r"$T_* = 10^{9} \;\alpha = 0.1$")
+    plt.loglog(freqs, omegacs, "-", color="green", label=r"$T_* = 10^{9}$ GeV $\alpha = 0.1$")
 
     #omegacs = csgw.OmegaGW(freqs, Ts=1e6, alpha=1.5)
     #plt.loglog(freqs, omegacs, "-", color="green", label=r"PT: $T_* = 10^{6} \;\mathrm{GeV}$")
@@ -222,5 +230,5 @@ if __name__ == "__main__":
     plt.clf()
     make_string_plot()
     plt.clf()
-    make_sgwb_plot()
-    plt.clf()
+    #make_sgwb_plot()
+    #plt.clf()
