@@ -30,12 +30,15 @@ def make_sgwb_plot():
     #lisa = gravmidband.LISASensitivity()
     #saff, sapo = lisa.omegadens()
     goff, gopo = ligo.omegadens()
+    gopo /= np.sqrt(ligo.length * goff)
     #plt.loglog(saff, sapo, "-", color="green", label="LISA")
     plt.loglog(goff, gopo, "-", color="black", label="LIGO")
 
     for sat in ("lisa", "tiango", "bdecigo"):
         ss = gravmidband.SatelliteSensitivity(satellite = sat)
         sff, spo = ss.omegadens()
+        #Correct for number of samples
+        spo /= np.sqrt(ss.length * sff)
         plt.loglog(sff, spo, "--", label=sat.upper())
 
     freqs = np.logspace(-7, 4, 50)
@@ -57,17 +60,17 @@ def make_sgwb_plot():
     plt.loglog(freqs, omegaimri, ":", color="purple", label="IMRI")
 
     csgw = gravmidband.CosmicStringGWB()
-    omegacs = csgw.OmegaGW(freqs, Gmu=1.e-12)
-    plt.loglog(freqs, omegacs, "-.", color="pink", label=r"$G\mu = 10^{-12}$")
+    omegacs = csgw.OmegaGW(freqs, Gmu=1.e-16)
+    plt.loglog(freqs, omegacs, "-.", color="grey", label=r"CS: $G\mu = 10^{-16}$")
 
     pt = gravmidband.PhaseTransition()
-    omegacs = pt.OmegaGW(freqs, Ts=1e9, alpha=0.01)
-    plt.loglog(freqs, omegacs, "-", color="brown", label=r"$T_* = 10^{8}\;\alpha=0.01$")
+    omegacs = pt.OmegaGW(freqs, Ts=1e9, alpha=0.001)
+    plt.loglog(freqs, omegacs, "-", color="brown", label=r"PT: $T_* = 10^{8}\;\alpha=0.001$")
 
     plt.legend(loc="upper left", ncol=2)
     plt.xlabel("f (Hz)")
     plt.ylabel(r"$\Omega_{GW}$")
-    plt.ylim(1e-14, 10)
+    plt.ylim(1e-16, 1e-4)
     plt.tight_layout()
     plt.savefig("sgwb.pdf")
 
@@ -78,28 +81,31 @@ def make_string_plot():
     #lisa = gravmidband.LISASensitivity()
     #saff, sapo = lisa.omegadens()
     goff, gopo = ligo.omegadens()
+    gopo /= np.sqrt(ligo.length * goff)
     #plt.loglog(saff, sapo, "-", color="green", label="LISA")
     plt.loglog(goff, gopo, "-", color="black", label="LIGO")
 
     for sat in ("lisa", "tiango"):
         ss = gravmidband.SatelliteSensitivity(satellite = sat)
         sff, spo = ss.omegadens()
+        #Correct for number of samples
+        spo /= np.sqrt(ss.length * sff)
         plt.loglog(sff, spo, "--", label=sat.upper())
 
     freqs = np.logspace(-7, 4, 50)
 
     csgw = gravmidband.CosmicStringGWB()
-    omegacs = csgw.OmegaGW(freqs, Gmu=1.e-12)
-    plt.loglog(freqs, omegacs, "-.", color="pink", label=r"$G\mu = 10^{-12}$")
+    omegacs = csgw.OmegaGW(freqs, Gmu=1.e-14)
+    plt.loglog(freqs, omegacs, "-.", color="pink", label=r"$G\mu = 10^{-14}$")
 
     #omegacs = csgw.OmegaGW(freqs, Gmu=1.e-17)
     #plt.loglog(freqs, omegacs, "--", color="red", label=r"$G\mu = 10^{-17}$")
 
-    omegacs = csgw.OmegaGW(freqs, Gmu=1.e-14)
-    plt.loglog(freqs, omegacs, ":", color="grey", label=r"$G\mu = 10^{-14}$")
-
     omegacs = csgw.OmegaGW(freqs, Gmu=1.e-16)
-    plt.loglog(freqs, omegacs, "-", color="brown", label=r"$G\mu = 10^{-16}$")
+    plt.loglog(freqs, omegacs, ":", color="grey", label=r"$G\mu = 10^{-16}$")
+
+    omegacs = csgw.OmegaGW(freqs, Gmu=1.e-18)
+    plt.loglog(freqs, omegacs, "-", color="brown", label=r"$G\mu = 10^{-18}$")
 
     #emri = gravmidband.EMRIGWB()
     #omegaemri = emri.OmegaGW(freqs)
@@ -108,7 +114,7 @@ def make_string_plot():
     plt.legend(loc="upper left", ncol=2)
     plt.xlabel("f (Hz)")
     plt.ylabel(r"$\Omega_{GW}$")
-    plt.ylim(1e-14, 1)
+    plt.ylim(1e-16, 1e-4)
     plt.tight_layout()
     plt.savefig("strings.pdf")
 
@@ -166,7 +172,7 @@ def make_pt_plot():
     plt.legend(loc="upper left", ncol=2)
     plt.xlabel("f (Hz)")
     plt.ylabel(r"$\Omega_{GW}$")
-    plt.ylim(1e-14, 1e-4)
+    plt.ylim(1e-16, 1e-4)
     plt.xlim(1e-6, 100)
     plt.tight_layout()
     plt.savefig("phasetransition.pdf")
