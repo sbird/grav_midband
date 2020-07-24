@@ -349,7 +349,7 @@ class Likelihoods:
             #lower limit just something slightly above zero.
             if params[3] > 1:
                 return -np.inf
-            if params[3] < 1e-4:
+            if params[3] < 1e-5:
                 return -np.inf
             ptalpha = params[3]
         # LIGO prior: Gaussian on BBH merger rate with central value of the true value.
