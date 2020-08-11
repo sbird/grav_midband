@@ -313,7 +313,7 @@ class Likelihoods:
             #Phase transition parameters being zero will lead to divide by zero,
             #so just make them small and the frequency high.
             self.trueparams = [1e10, 56., 0.01, 1e-9]
-        self.experiments = [SGWBExperiment(binarybh = self.binarybh, imribh = self.imribh, cstring = self.cstring, phase = self.phase, sensitivity = sens, trueparams = self.trueparams, nsamples=nsamples) for sens in self.sensitivities]
+        self.experiments = [SGWBExperiment(binarybh = self.binarybh, imribh = self.imribh, cstring = self.cstring, phase = self.phase, sensitivity = sens, trueparams = self.trueparams) for sens in self.sensitivities]
 
         #Expected number of ligo detections at time of LISA launch for the BBH amplitude prior.
         self.nligo = 1000
