@@ -10,7 +10,6 @@ import emcee
 import pint
 import scipy.interpolate
 import scipy.integrate
-import scipy.special as bessel
 
 ureg = pint.UnitRegistry()
 
@@ -600,51 +599,22 @@ class IMRIGWB(BinaryBHGWB):
         """OmegaGW as a function of frequency. Normalization is in units of mergers per Gpc^3 per year."""
         return super().OmegaGW(freq, Norm=Norm, alpha = alpha, m2min=5e2, m2max=1e4)
 
-class EMRIWave:
-    """Waveform for a single EMRI inspiral.
-       Uses the waveform estimates from Barack and Cutler 04 gr-qc/0310125"""
-    def __init__(self, MBH, zz, SBH, mu, DL, ee):
-        self.MBH = MBH
-        self.zz = zz
-        self.SBH = SBH
-        self.mu = mu
-        self.DL = DL
-        self.ee = ee
+class EMRIGWB:
+    """Uses the EMRI SGWB from Bonetti & Sesana, """
+    def __init__(self):
+        self.hub = ((67.9 * ureg('km/s/Mpc')).to("1/s").magnitude)
+        #Model 1 which is fiducial
+        bonetti = np.loadtxt("hc_EMRImodel1nospin_4.0yr_Babak20.txt")
+        self.freq = bonetti[:,0]
+        #Use the model with detected signals removed
+        self.hcc = bonetti[:,2]
+        #Omega_GW
+        self.omegagw = self.freq**3 * 4 * math.pi**2 / 3 / self.hub**2
+        self.omegagwii = scipy.interpolate.interp1d(self.freq, self.omegagw)
 
-    def gg(self, nn, ee):
-        """Complicated Bessel function of eccentricity. Eq. 58"""
-        nee = nn * ee
-        nm2 = bessel.jv(nn-2, nee)
-        nm1 = bessel.jv(nn-1, nee)
-        nm0 = bessel.jv(nn, nee)
-        np1 = bessel.jv(nn+1, nee)
-        np2 = bessel.jv(nn+2, nee)
-        first = nm2 - 2 * ee * nm1 + 2 / nn * nm0 + 2 * ee * np1 - np2
-        second = nm2 - 2 * nm0 + np2
-        return nn**4 / 32. * (first**2 + (1-ee**2)*second ** 2 + 4 / (3*nn**2) * nm0**2)
-
-    def dEdt(self, freq, nn, ee, MM, mu):
-        """Change in Energy with time. Eq. 57."""
-        return 32./5 * mu**2 * MM**(4./3) * (2 * math.pi * freq)**(10./3) * self.gg(nn, ee)
-
-    def emrihc(self, freq, dist):
-        """From Barack and Cutler 04, gr-qc/0310125"""
-        return 1./(math.pi * dist) * np.sqrt(2 * self.dEdt(freq, nn, ee, MM, mu) / self.dfn(nn, ee)
-
-    def dfn(self, freq, nn, ee):
-        r"""Frequency as a change in time. fn = n \nu(t) + \gamma(t) / \pi"""
-        return nn * self.dnudt(freq, ee) + self.dgammadnu * self.dnudt + self.dgammade * self.dedt
-
-    def dnudt(self, freq, ):
-
-
-
-class EMRIGWB(IMRIGWB):
-    """Subclasses the Binary BH model for EMRIs.
-    Uses the waveform estimates from Barack and Cutler 04 gr-qc/0310125"""
-    def OmegaGW(self, freq, Norm=0.01, alpha=-2.3):
-        """OmegaGW as a function of frequency. Normalization is in units of mergers per Gpc^3 per year."""
-        return super().OmegaGW(freq, Norm=Norm, alpha = alpha, m2min=2e6, m2max=1e10)
+    def OmegaGW(self, freq, Norm=1):
+        """OmegaGW as a function of frequency. Normalization is relative to the fiducial model."""
+        return Norm * self.omegagwii(freq)
 
 def gcorr(x):
     """Corrections to radiation density from freezeout"""
