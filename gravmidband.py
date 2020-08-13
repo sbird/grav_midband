@@ -210,7 +210,7 @@ class LIGOSensitivity(Sensitivity):
 class SGWBExperiment:
     """Helper class to hold pre-computed parts of the experimental data,
        presenting a consistent interface for different experiments."""
-    def __init__(self, binarybh, sensitivity, trueparams, imribh=None, cstring=None, phase = None):
+    def __init__(self, binarybh, sensitivity, trueparams, imribh=None, emribh=None, cstring=None, phase=None):
         self.cstring = cstring
         self.sensitivity = sensitivity
         self.freq, self.omegasens = sensitivity.omegadens()
@@ -228,6 +228,12 @@ class SGWBExperiment:
         if imribh is not None:
             self.imri_singleamp = imribh.OmegaGW(self.freq, Norm = 1)
             self.mockdata += self.imri_singleamp * trueparams[2]
+
+        self.emri_singleamp = 0
+        #Add bckgrnd from EMRI
+        if emribh is not None:
+            self.emri_singleamp = emribh.OmegaGW(self.freq, Norm = 1)
+            self.mockdata += self.emri_singleamp * trueparams[3]
 
     def cosmicstringmodel(self, Gmu):
         """The cosmic string SGWB model."""
@@ -249,6 +255,12 @@ class SGWBExperiment:
             return 0
         return amp * self.imri_singleamp
 
+    def emrimodel(self, amp):
+        """EMRI model"""
+        if amp < 0:
+            return 0
+        return amp * self.emri_singleamp
+
     def whitedwarfmodel(self, number):
         """The white dwarf background model.
         This can be neglected: alone of all the signals the WD background is
@@ -263,7 +275,7 @@ class SGWBExperiment:
         https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.116.131102"""
         return amp * self.bbh_singleamp
 
-    def omegamodel(self, cosmo, bbhamp, imriamp=0, ptalpha = 1):
+    def omegamodel(self, cosmo, bbhamp, imriamp=0, emriamp=0, ptalpha = 1):
         """Construct a model with three free parameters,
            combining multiple SGWB sources:
            Strings, BBH (LIGO) and BBH (IMRI)."""
@@ -272,7 +284,7 @@ class SGWBExperiment:
             cos = self.cosmicstringmodel(cosmo)
         elif self.phase is not None:
             cos = self.phasemodel(cosmo, alpha = ptalpha)
-        return cos + self.imrimodel(imriamp) + self.bhbinarymerger(bbhamp)
+        return cos + self.imrimodel(imriamp) + self.bhbinarymerger(bbhamp) + self.emrimodel(emriamp)
 
 class Likelihoods:
     """Class to perform likelihood analysis on SGWB.
@@ -307,28 +319,31 @@ class Likelihoods:
 
         if self.cstring is not None:
             #This is the "true" model we are trying to detect: no cosmic strings,
-            #LIGO current best fit merger rate.
-            self.trueparams = [0, 56., 0.01]
+            #LIGO current best fit merger rate, Fiducial IMRI & EMRI rates.
+            self.trueparams = [0, 56., 0.005, 1]
         elif self.phase is not None:
             #Phase transition parameters being zero will lead to divide by zero,
             #so just make them small and the frequency high.
-            self.trueparams = [1e10, 56., 0.01, 1e-9]
+            self.trueparams = [1e10, 56., 0.005, 1, 1e-9]
         self.experiments = [SGWBExperiment(binarybh = self.binarybh, imribh = self.imribh, cstring = self.cstring, phase = self.phase, sensitivity = sens, trueparams = self.trueparams) for sens in self.sensitivities]
 
         #Expected number of ligo detections at time of LISA launch for the BBH amplitude prior.
-        self.nligo = 1000
+        #self.nligo = 1000
 
     def lnlikelihood(self, params):
         """Likelihood parameters:
         0 - cosmic string tension or PT T* (frequency)
         1 - BH binary merger rate amplitude
         2 - IMRI merger rate amplitude
-        3 - PT amplitude alpha (if phase is not None)
+        3 - EMRI merger rate amplitude
+        4 - PT amplitude alpha (if phase is not None)
         """
         #Priors: positive BBH merger rate
         if params[1] < 0:
             return -np.inf
         if params[2] < 0:
+            return - np.inf
+        if params[3] < 0:
             return - np.inf
         ptalpha = 1
         #CS string tension limit from EPTA
@@ -347,11 +362,11 @@ class Likelihoods:
                 return -np.inf
             #alpha: upper limit set by plausible physical values,
             #lower limit just something slightly above zero.
-            if params[3] > 1:
+            if params[4] > 1:
                 return -np.inf
-            if params[3] < 1e-5:
+            if params[4] < 1e-5:
                 return -np.inf
-            ptalpha = params[3]
+            ptalpha = params[4]
         # LIGO prior: Gaussian on BBH merger rate with central value of the true value.
         # Remove this: it may be that the unresolved high redshift binaries merge
         # at a different rate to the low redshift ones and so we should allow a free amplitude
@@ -359,7 +374,7 @@ class Likelihoods:
         llike = 0
 
         for exp in self.experiments:
-            model = exp.omegamodel(cosmo = np.exp(params[0]), bbhamp = params[1], imriamp = params[2], ptalpha=ptalpha)
+            model = exp.omegamodel(cosmo = np.exp(params[0]), bbhamp = params[1], imriamp = params[2],emriamp=params[3], ptalpha=ptalpha)
             llike += - 1 * exp.length * np.trapz(((model - exp.mockdata)/ exp.omegasens)**2, x=exp.freq)
             #like += ampprior * np.size(exp.freq)
         #print(np.exp(params[0]), like)
@@ -371,12 +386,12 @@ class Likelihoods:
         if self.cstring is not None:
             #Say Gmu ranges from exp(-45) - exp(-14), LIGO merger rate between 0 and 100
             #and IMRI rate from 0 to 1.
-            pr = np.array([10, 100, 0.1])
+            pr = np.array([10, 100, 0.1, 2])
             #Priors are assumed to be in the middle.
-            cent = np.array([-40, 55, 0.05])
+            cent = np.array([-40, 55, 0.05, 1])
         elif self.phase is not None:
-            pr = np.array([10, 100, 0.1, 0.2])
-            cent = np.array([2, 100, 0.1, 0.2])
+            pr = np.array([10, 100, 0.1, 2, 0.2])
+            cent = np.array([2, 100, 0.1, 1, 0.2])
         p0 = [cent+2*pr/16.*np.random.rand(len(pr))-pr/16. for _ in range(nwalkers)]
         lnk0 = np.array([self.lnlikelihood(pp) for pp in p0])
         assert np.all(np.isfinite(lnk0))

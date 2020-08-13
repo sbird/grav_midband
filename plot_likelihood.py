@@ -11,9 +11,9 @@ def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None, stri
     samples = np.loadtxt(chainfile)
     ticks = {}
     if string:
-        pnames = [ r"G\mu", r"\mathrm{SMBBH}", r"\mathrm{IMRI}"]
+        pnames = [ r"G\mu", r"\mathrm{SMBBH}", r"\mathrm{IMRI}", r"\mathrm{EMRI}"]
     else:
-        pnames = [ r"T_\ast", r"\mathrm{SMBBH}", r"\mathrm{IMRI}", r"\alpha"]
+        pnames = [ r"T_\ast", r"\mathrm{SMBBH}", r"\mathrm{IMRI}", r"\mathrm{EMRI}", r"\alpha"]
     prange = None
     if ranges is not None:
         prange = {pnames[i] : ranges[i] for i in range(len(pnames))}
@@ -38,9 +38,9 @@ def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None, stri
         ticklabels = {pnames[0] : [r"$10^{-20}$", r"$10^{-17}$", r"$10^{-15}$"]}
     else:
         ticks = {pnames[0]: [0, np.log(1e2), np.log(1e4), np.log(1e6)],
-                 pnames[3]: [0, 0.2, 0.4, 0.6, 0.8, 1.0]}
+                 pnames[4]: [0, 0.2, 0.4, 0.6, 0.8, 1.0]}
         ticklabels = {pnames[0] : [r"$1$", r"$10^{2}$", r"$10^{4}$", r"$10^{6}$"],
-                      pnames[3]: ["0", "0.2", "0.4", "0.6", "0.8", "1.0"]}
+                      pnames[4]: ["0", "0.2", "0.4", "0.6", "0.8", "1.0"]}
 
     for pi in range(samples.shape[1]):
         for pi2 in range(pi + 1):
@@ -58,17 +58,17 @@ def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None, stri
 
 if __name__ == "__main__":
     #For PT
-    true_vals = [0, 56., 0.01, 0]
+    true_vals = [0, 56., 0.01, 1, 0]
     #ranges
-    ranges = [[-1, 13.8], [0, 100], [0,1], [1e-6,1]]
+    ranges = [[-1, 13.8], [0, 100], [0,1], [0.1,10], [1e-6,1]]
     make_plot("samples_ligo_lisa_phase_bbh.txt", "like_ligo_lisa_phase_bbh.pdf", true_parameter_values = true_vals, ranges=ranges, string=False)
     make_plot("samples_ligo_lisa_tiango_phase_bbh.txt", "like_ligo_lisa_tiango_phase_bbh.pdf", true_parameter_values = true_vals, ranges=ranges, string=False)
     make_plot("samples_ligo_lisa_decigo_phase_bbh.txt", "like_ligo_lisa_decigo_phase_bbh.pdf", true_parameter_values = true_vals, ranges=ranges, string=False)
 
     #For strings
-    true_vals = [0, 56., 0.01]
+    true_vals = [0, 56., 0.01, 1]
     #ranges
-    ranges = [[-50, np.log(2e-13)], [0, 100], [0,1]]
+    ranges = [[-50, np.log(2e-13)], [0, 100], [0,1], [0.1,10]]
     make_plot("samples_ligo_lisa_string_bbh.txt", "like_ligo_lisa_string_bbh.pdf", true_parameter_values = true_vals, ranges=ranges)
     make_plot("samples_ligo_lisa_tiango_string_bbh.txt", "like_ligo_lisa_tiango_string_bbh.pdf", true_parameter_values = true_vals, ranges=ranges)
     make_plot("samples_ligo_lisa_decigo_string_bbh.txt", "like_ligo_lisa_decigo_string_bbh.pdf", true_parameter_values = true_vals, ranges=ranges)
