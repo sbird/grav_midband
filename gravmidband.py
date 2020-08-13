@@ -601,21 +601,25 @@ class IMRIGWB(BinaryBHGWB):
         return super().OmegaGW(freq, Norm=Norm, alpha = alpha, m2min=m2min, m2max=m2max)
 
 class EMRIGWB:
-    """Uses the EMRI SGWB from Bonetti & Sesana, """
+    """Uses the EMRI SGWB from Bonetti & Sesana, 2007.14403"""
     def __init__(self):
         self.hub = ((67.9 * ureg('km/s/Mpc')).to("1/s").magnitude)
         #Model 1 which is fiducial
         bonetti = np.loadtxt("hc_EMRImodel1nospin_4.0yr_Babak20.txt")
-        self.freq = bonetti[:,0]
+        self.freq = bonetti[1:-1,0]
         #Use the model with detected signals removed
-        self.hcc = bonetti[:,2]
+        self.hcc = bonetti[1:-1,2]
         #Omega_GW
-        self.omegagw = self.freq**3 * 4 * math.pi**2 / 3 / self.hub**2
-        self.omegagwii = scipy.interpolate.interp1d(self.freq, self.omegagw)
+        self.omegagw = self.freq**2 * 4 * math.pi**2 / 3 / self.hub**2 * self.hcc**2
+        self.omegagwii = scipy.interpolate.interp1d(np.log(self.freq), np.log(self.omegagw), fill_value = "extrapolate")
 
     def OmegaGW(self, freq, Norm=1):
         """OmegaGW as a function of frequency. Normalization is relative to the fiducial model."""
-        return Norm * self.omegagwii(freq)
+        #Rely on the extrapolation instead.
+        #ii = np.where((freq < np.max(self.freq))*(freq > np.min(self.freq)))
+        #om = 1e-90 * np.ones_like(freq)
+        om = Norm * np.exp(self.omegagwii(np.log(freq)))
+        return om
 
 def gcorr(x):
     """Corrections to radiation density from freezeout"""
