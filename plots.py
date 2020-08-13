@@ -55,9 +55,9 @@ def make_sgwb_plot():
     omegaemri = emri.OmegaGW(freqs)
     plt.loglog(freqs, omegaemri, ":", color="gold", label="EMRI mergers")
 
-    #imri = gravmidband.IMRIGWB()
-    #omegaimri = imri.OmegaGW(freqs)
-    #plt.loglog(freqs, omegaimri, ":", color="purple", label="IMRI")
+    imri = gravmidband.IMRIGWB()
+    omegaimri = imri.OmegaGW(freqs)
+    plt.loglog(freqs, omegaimri, ":", color="purple", label="IMRI")
 
     #csgw = gravmidband.CosmicStringGWB()
     #omegacs = csgw.OmegaGW(freqs, Gmu=1.e-16)
