@@ -95,8 +95,8 @@ class SatelliteSensitivity(Sensitivity):
         # Output Curve type is Root Spectral Density, per root Hz
         # f [Hz]    hf [Hz^(-1/2)]
         #self.lisaintp = scipy.interpolate.interp1d(self.lisa[:,0], self.lisa[:,1])
-        #Nominal 4 year LISA mission x 0.75 efficiency = 3 years.
-        self.length = 3 * 3.154e7
+        #Nominal 4 year LISA mission (some use x 0.75 efficiency = 3 years).
+        self.length = 4 * 3.154e7
         #Speed of light in m/s
         self.light = 299792458
         self.extdata = None
