@@ -67,6 +67,12 @@ class Sensitivity:
         intp = scipy.interpolate.interp1d(np.log(freq), np.log(psd))
         return np.exp(intp(np.log(newfreq)))
 
+    def powerlawsensintegral(self, beta, fref):
+        """Compute the power law sensitivity integral, eq. 29 of 1310.5300"""
+        (ff, omegaeff) = self.omegadens()
+        integrand = (ff/fref)**(2*beta)/omegaeff**2
+        return np.trapz(integrand, ff)
+
 class LISASensitivity(Sensitivity):
     """LISA sensitivity curve as a function of frequency
        from http://www.srl.caltech.edu/cgi-bin/cgiCurve"""
@@ -286,11 +292,43 @@ class SGWBExperiment:
             cos = self.phasemodel(cosmo, alpha = ptalpha)
         return cos + self.imrimodel(imriamp) + self.bhbinarymerger(bbhamp) + self.emrimodel(emriamp)
 
+class PowerLawSensitivity:
+    """Class to compute power law sensitivities."""
+    def __init__(self, ligo=True, satellites="lisa", snrthresh=1):
+        if isinstance(satellites, str):
+            satellites = (satellites,)
+
+        self.sensitivities = []
+        if ligo:
+            self.sensitivities += [LIGOSensitivity(),]
+        if satellites[0] != "":
+            self.sensitivities += [SatelliteSensitivity(satellite = sat) for sat in satellites]
+
+        #Signal to noise threshold for detection: by default 1
+        self.snr = snrthresh
+        # Reference frequency in Hz
+        self.fref = 1.
+        self.length = self.sensitivities[0].length
+
+        self.betas = np.arange(-8,9)
+        self.ombetas = [self.omegab(beta) for beta in self.betas]
+
+    def omegab(self, beta):
+        """Get omegabeta for all our experiments, eq. 29 of 1310.5300"""
+        tot = np.sum([sens.powerlawsensintegral(beta, self.fref) for sens in self.sensitivities])
+        return self.snr * np.sqrt(2 * self.length * tot)
+
+    def omegapls(self, freq):
+        """The power law sensitivity at given frequency"""
+        omegapls = np.max(np.outer(self.ombetas, (freq/self.fref))**self.betas, axis=1)
+        assert np.size(omegapls) == np.size(freq)
+        return omegapls
+
 class Likelihoods:
     """Class to perform likelihood analysis on SGWB.
     Args:
     """
-    def __init__(self, nsamples=100, strings=True, phase = False, imri = True, ligo = True, satellites="lisa"):
+    def __init__(self, strings=True, phase = False, imri = True, ligo = True, satellites="lisa"):
         self.ureg = ureg
         self.binarybh = BinaryBHGWB()
 
