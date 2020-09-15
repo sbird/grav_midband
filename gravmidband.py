@@ -316,11 +316,11 @@ class PowerLawSensitivity:
     def omegab(self, beta):
         """Get omegabeta for all our experiments, eq. 29 of 1310.5300"""
         tot = np.sum([sens.powerlawsensintegral(beta, self.fref) for sens in self.sensitivities])
-        return self.snr * np.sqrt(2 * self.length * tot)
+        return self.snr / np.sqrt(2 * self.length * tot)
 
     def omegapls(self, freq):
         """The power law sensitivity at given frequency"""
-        omegapls = np.max(np.outer(self.ombetas, (freq/self.fref))**self.betas, axis=1)
+        omegapls = np.array([np.max((ff/self.fref)**self.betas * self.ombetas) for ff in freq])
         assert np.size(omegapls) == np.size(freq)
         return omegapls
 
