@@ -111,18 +111,24 @@ def plot_detector_fill():
     """Plot a filled region of detectors"""
     alphas = {"lisa": 0.3, "tiango": 0.2}
     for sat in ("lisa", "tiango"):
-        ss = gravmidband.SatelliteSensitivity(satellite = sat)
-        sff, spo = ss.omegadens()
+        ss = gravmidband.PowerLawSensitivity(satellites = sat, ligo=False)
+        sff,_ = ss.sensitivities[0].PSD()
+        spo = ss.omegapls(sff)
+        #ss = gravmidband.SatelliteSensitivity(satellite = sat)
+        #sff, spo = ss.omegadens()
         #Correct for number of samples
-        spo /= np.sqrt(ss.length * sff)
+        #spo /= np.sqrt(ss.length * sff)
         plt.fill_between(sff, y1=spo, y2=1, color="grey", alpha=alphas[sat], linewidth=0)
 
         #sigff = np.concatenate([sigff,sff])
         #sigpo = np.concatenate([sigpo, spo])
 
-    ligo = gravmidband.LIGOSensitivity()
-    goff, gopo = ligo.omegadens()
-    gopo /= np.sqrt(ligo.length * goff)
+    ligo = gravmidband.PowerLawSensitivity(ligo=True, satellites="")
+    goff,_ = ligo.sensitivities[0].PSD()
+    gopo = ligo.omegapls(goff)
+    #ligo = gravmidband.LIGOSensitivity()
+    #goff, gopo = ligo.omegadens()
+    #gopo /= np.sqrt(ligo.length * goff)
     plt.fill_between(goff, y1=gopo, y2=1, color="grey", alpha=0.5, linewidth=0)
     plt.text(5e-4,1e-8,"LISA")
     plt.text(0.05,1e-8,"TIANGO")
