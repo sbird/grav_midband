@@ -89,9 +89,14 @@ def make_pls_plot():
     plt.fill_between(goff, y1=gopo, y2=1, color="grey", alpha=0.5, linewidth=0)
 
     total = gravmidband.PowerLawSensitivity(ligo=True, satellites=["lisa", "tiango"])
-    freq = np.logspace(-6, 100)
+    freq = np.logspace(-6, 4, 150)
     plstot = total.omegapls(freq)
-    plt.loglog(freq, plstot, color="black", label="Total")
+    plt.loglog(freq, plstot, color="black", label="Total", ls="--")
+    total = gravmidband.PowerLawSensitivity(ligo=False, satellites=["lisa", "tiango"])
+    freq = np.logspace(-6, 4, 150)
+    plstot = total.omegapls(freq)
+    plt.loglog(freq, plstot, color="brown", label="Satellites")
+    plt.legend(loc="lower right")
     plt.text(5e-4,1e-8,"LISA")
     plt.text(0.05,1e-8,"TIANGO")
     plt.text(30,1e-8,"LIGO")
@@ -249,6 +254,8 @@ def make_pt_plot():
     plt.savefig("phasetransition.pdf")
 
 if __name__ == "__main__":
+    make_pls_plot()
+    plt.clf()
     make_foreground_plot()
     plt.clf()
     make_pt_plot()
