@@ -944,19 +944,22 @@ if __name__=="__main__":
     #Spawn jobs in parallel
     from multiprocessing import Process
     #LISA only
-    p = Process(target=like_run, args=("samples_ligo_lisa_string_bbh.txt","lisa", True, False))
+    procs = ()
+    procs.append(Process(target=like_run, args=("samples_ligo_lisa_string_bbh.txt","lisa", True, False)))
     #LISA + DECIGO
-    p = Process(target=like_run, args=("samples_ligo_lisa_decigo_string_bbh.txt",("lisa","bdecigo"), True, False))
+    procs.append(Process(target=like_run, args=("samples_ligo_lisa_decigo_string_bbh.txt",("lisa","bdecigo"), True, False)))
     #LISA + TianGo
-    p = Process(target=like_run, args=("samples_ligo_lisa_tiango_string_bbh.txt",("lisa","tiango"), True, False))
+    procs.append(Process(target=like_run, args=("samples_ligo_lisa_tiango_string_bbh.txt",("lisa","tiango"), True, False)))
 
     #LISA only with phase transition
-    p = Process(target=like_run, args=("samples_ligo_lisa_phase_bbh.txt","lisa", False, True))
+    procs.append(Process(target=like_run, args=("samples_ligo_lisa_phase_bbh.txt","lisa", False, True)))
     #LISA+TianGo with phase transition
-    p = Process(target=like_run, args=("samples_ligo_lisa_tiango_phase_bbh.txt",("lisa","tiango"), False, True))
+    procs.append(Process(target=like_run, args=("samples_ligo_lisa_tiango_phase_bbh.txt",("lisa","tiango"), False, True)))
     #LISA+DECIGO with phase transition
-    p = Process(target=like_run, args=("samples_ligo_lisa_decigo_phase_bbh.txt",("lisa","bdecigo"), False, True))
+    procs.append(Process(target=like_run, args=("samples_ligo_lisa_decigo_phase_bbh.txt",("lisa","bdecigo"), False, True)))
 
+    [pp.start() for pp in procs]
+    [pp.join(timeout=None) for pp in procs]
     #LISA only
     #like = Likelihoods(imri=True, strings=True, ligo = True, satellites="lisa")
     #like.do_sampling(savefile = "samples_ligo_lisa_string_bbh.txt")
