@@ -74,24 +74,61 @@ def make_sgwb_plot():
     plt.tight_layout()
     plt.savefig("sgwb.pdf")
 
-def plot_detector_fill():
-    """Plot a filled region of detectors"""
-    sigff = np.array([])
-    sigpo = np.array([])
+def make_pls_plot():
+    """Make a power law sensitivity plot"""
     alphas = {"lisa": 0.3, "tiango": 0.2}
     for sat in ("lisa", "tiango"):
-        ss = gravmidband.SatelliteSensitivity(satellite = sat)
-        sff, spo = ss.omegadens()
+        ss = gravmidband.PowerLawSensitivity(satellites = sat, ligo=False)
+        sff,_ = ss.sensitivities[0].PSD()
+        spo = ss.omegapls(sff)
+        plt.fill_between(sff, y1=spo, y2=1, color="grey", alpha=alphas[sat], linewidth=0)
+
+    ligo = gravmidband.PowerLawSensitivity(ligo=True, satellites="")
+    goff,_ = ligo.sensitivities[0].PSD()
+    gopo = ligo.omegapls(goff)
+    plt.fill_between(goff, y1=gopo, y2=1, color="grey", alpha=0.5, linewidth=0)
+
+    total = gravmidband.PowerLawSensitivity(ligo=True, satellites=["lisa", "tiango"])
+    freq = np.logspace(-6, 4, 150)
+    plstot = total.omegapls(freq)
+    plt.loglog(freq, plstot, color="black", label="Total", ls="--")
+    total = gravmidband.PowerLawSensitivity(ligo=False, satellites=["lisa", "tiango"])
+    freq = np.logspace(-6, 4, 150)
+    plstot = total.omegapls(freq)
+    plt.loglog(freq, plstot, color="brown", label="Satellites")
+    plt.legend(loc="lower right")
+    plt.text(5e-4,1e-8,"LISA")
+    plt.text(0.05,1e-8,"TIANGO")
+    plt.text(30,1e-8,"LIGO")
+    plt.xlabel("f (Hz)")
+    plt.ylabel(r"$\Omega_{GW}$")
+    plt.ylim(1e-16, 1e-4)
+    plt.tight_layout()
+    plt.savefig("pls.pdf")
+
+
+def plot_detector_fill():
+    """Plot a filled region of detectors"""
+    alphas = {"lisa": 0.3, "tiango": 0.2}
+    for sat in ("lisa", "tiango"):
+        ss = gravmidband.PowerLawSensitivity(satellites = sat, ligo=False)
+        sff,_ = ss.sensitivities[0].PSD()
+        spo = ss.omegapls(sff)
+        #ss = gravmidband.SatelliteSensitivity(satellite = sat)
+        #sff, spo = ss.omegadens()
         #Correct for number of samples
-        spo /= np.sqrt(ss.length * sff)
+        #spo /= np.sqrt(ss.length * sff)
         plt.fill_between(sff, y1=spo, y2=1, color="grey", alpha=alphas[sat], linewidth=0)
 
         #sigff = np.concatenate([sigff,sff])
         #sigpo = np.concatenate([sigpo, spo])
 
-    ligo = gravmidband.LIGOSensitivity()
-    goff, gopo = ligo.omegadens()
-    gopo /= np.sqrt(ligo.length * goff)
+    ligo = gravmidband.PowerLawSensitivity(ligo=True, satellites="")
+    goff,_ = ligo.sensitivities[0].PSD()
+    gopo = ligo.omegapls(goff)
+    #ligo = gravmidband.LIGOSensitivity()
+    #goff, gopo = ligo.omegadens()
+    #gopo /= np.sqrt(ligo.length * goff)
     plt.fill_between(goff, y1=gopo, y2=1, color="grey", alpha=0.5, linewidth=0)
     plt.text(5e-4,1e-8,"LISA")
     plt.text(0.05,1e-8,"TIANGO")
@@ -170,7 +207,6 @@ def make_string_plot():
     plt.tight_layout()
     plt.savefig("strings.pdf")
 
-
 def make_pt_plot():
     """Plot stochastic gravitational wave backgrounds from a phase transition."""
     #ligo = gravmidband.LIGOSensitivity()
@@ -224,6 +260,8 @@ def make_pt_plot():
     plt.savefig("phasetransition.pdf")
 
 if __name__ == "__main__":
+    make_pls_plot()
+    plt.clf()
     make_foreground_plot()
     plt.clf()
     make_pt_plot()
