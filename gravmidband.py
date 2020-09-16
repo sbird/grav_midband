@@ -935,24 +935,44 @@ def test_cs():
     tot = cs.OmegaGW([1e-6,20], 1e-11)
     assert np.all(np.abs(tot - np.array([1.05797682e-09, 1.69091713e-10])) < 2.e-3)
 
+def like_run(savefile, satellites, strings, phase):
+    """Small function to do the sampling"""
+    like = Likelihoods(imri=True, emri=True, strings=strings, phase=phase, ligo = True, satellites=satellites)
+    like.do_sampling(savefile = savefile)
 
 if __name__=="__main__":
+    #Spawn jobs in parallel
+    from multiprocessing import Process
     #LISA only
-    like = Likelihoods(imri=True, strings=True, ligo = True, satellites="lisa")
-    like.do_sampling(savefile = "samples_ligo_lisa_string_bbh.txt")
+    p = Process(target=like_run, args=("samples_ligo_lisa_string_bbh.txt","lisa", True, False))
     #LISA + DECIGO
-    like = Likelihoods(imri=True, strings=True, ligo = True, satellites=("lisa","bdecigo"))
-    like.do_sampling(savefile = "samples_ligo_lisa_decigo_string_bbh.txt")
+    p = Process(target=like_run, args=("samples_ligo_lisa_decigo_string_bbh.txt",("lisa","bdecigo"), True, False))
     #LISA + TianGo
-    like = Likelihoods(imri=True, strings=True, ligo = True, satellites=("lisa","tiango"))
-    like.do_sampling(savefile = "samples_ligo_lisa_tiango_string_phase_bbh_imri.txt")
+    p = Process(target=like_run, args=("samples_ligo_lisa_tiango_string_bbh.txt",("lisa","tiango"), True, False))
 
     #LISA only with phase transition
-    like = Likelihoods(imri=True, phase=True, strings=False, ligo = True, satellites="lisa")
-    like.do_sampling(savefile = "samples_ligo_lisa_phase_bbh.txt")
+    p = Process(target=like_run, args=("samples_ligo_lisa_phase_bbh.txt","lisa", False, True))
     #LISA+TianGo with phase transition
-    like = Likelihoods(imri=True, phase=True, strings=False, ligo = True, satellites=("lisa", "tiango"))
-    like.do_sampling(savefile = "samples_ligo_lisa_tiango_phase_bbh.txt")
+    p = Process(target=like_run, args=("samples_ligo_lisa_tiango_phase_bbh.txt",("lisa","tiango"), False, True))
     #LISA+DECIGO with phase transition
-    like = Likelihoods(imri=True, phase=True, strings=False, ligo = True, satellites=("lisa", "bdecigo"))
-    like.do_sampling(savefile = "samples_ligo_lisa_decigo_phase_bbh.txt")
+    p = Process(target=like_run, args=("samples_ligo_lisa_decigo_phase_bbh.txt",("lisa","bdecigo"), False, True))
+
+    #LISA only
+    #like = Likelihoods(imri=True, strings=True, ligo = True, satellites="lisa")
+    #like.do_sampling(savefile = "samples_ligo_lisa_string_bbh.txt")
+    #LISA + DECIGO
+    #like = Likelihoods(imri=True, strings=True, ligo = True, satellites=("lisa","bdecigo"))
+    #like.do_sampling(savefile = "samples_ligo_lisa_decigo_string_bbh.txt")
+    #LISA + TianGo
+    #like = Likelihoods(imri=True, strings=True, ligo = True, satellites=("lisa","tiango"))
+    #like.do_sampling(savefile = "samples_ligo_lisa_tiango_string_phase_bbh_imri.txt")
+
+    #LISA only with phase transition
+    #like = Likelihoods(imri=True, phase=True, strings=False, ligo = True, satellites="lisa")
+    #like.do_sampling(savefile = "samples_ligo_lisa_phase_bbh.txt")
+    #LISA+TianGo with phase transition
+    #like = Likelihoods(imri=True, phase=True, strings=False, ligo = True, satellites=("lisa", "tiango"))
+    #like.do_sampling(savefile = "samples_ligo_lisa_tiango_phase_bbh.txt")
+    #LISA+DECIGO with phase transition
+    #like = Likelihoods(imri=True, phase=True, strings=False, ligo = True, satellites=("lisa", "bdecigo"))
+    #like.do_sampling(savefile = "samples_ligo_lisa_decigo_phase_bbh.txt")
