@@ -944,7 +944,7 @@ if __name__=="__main__":
     #Spawn jobs in parallel
     from multiprocessing import Process
     #LISA only
-    procs = ()
+    procs = []
     procs.append(Process(target=like_run, args=("samples_ligo_lisa_string_bbh.txt","lisa", True, False)))
     #LISA + DECIGO
     procs.append(Process(target=like_run, args=("samples_ligo_lisa_decigo_string_bbh.txt",("lisa","bdecigo"), True, False)))
