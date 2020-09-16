@@ -328,7 +328,7 @@ class Likelihoods:
     """Class to perform likelihood analysis on SGWB.
     Args:
     """
-    def __init__(self, strings=True, phase = False, imri = True, ligo = True, satellites="lisa"):
+    def __init__(self, strings=True, phase = False, imri = True, emri=True, ligo = True, satellites="lisa"):
         self.ureg = ureg
         self.binarybh = BinaryBHGWB()
 
@@ -342,9 +342,13 @@ class Likelihoods:
         if self.phase is not None and self.cstring is not None:
             raise ValueError("Must use Cosmic strings or Phase Transition, not both")
 
-        self.imri = None
+        self.imribh = None
         if imri:
             self.imribh = IMRIGWB()
+
+        self.emribh = None
+        if emri:
+            self.emribh = EMRIGWB()
 
         if isinstance(satellites, str):
             satellites = (satellites,)
@@ -363,7 +367,7 @@ class Likelihoods:
             #Phase transition parameters being zero will lead to divide by zero,
             #so just make them small and the frequency high.
             self.trueparams = [1e10, 56., 0.005, 1, 1e-9]
-        self.experiments = [SGWBExperiment(binarybh = self.binarybh, imribh = self.imribh, cstring = self.cstring, phase = self.phase, sensitivity = sens, trueparams = self.trueparams) for sens in self.sensitivities]
+        self.experiments = [SGWBExperiment(binarybh = self.binarybh, imribh = self.imribh, emribh=self.emribh, cstring = self.cstring, phase = self.phase, sensitivity = sens, trueparams = self.trueparams) for sens in self.sensitivities]
 
         #Expected number of ligo detections at time of LISA launch for the BBH amplitude prior.
         #self.nligo = 1000
