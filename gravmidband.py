@@ -398,7 +398,7 @@ class Likelihoods:
         elif self.phase is not None:
             #Phase transition energy: lower limit so that it lies well inside the LISA band
             #Upper limit so it lies within LIGO band
-            if params[0] > np.log(1e9):
+            if params[0] > np.log(1e11):
                 return -np.inf
             if params[0] < np.log(1e2):
                 return -np.inf
@@ -406,7 +406,7 @@ class Likelihoods:
             #lower limit just something slightly above zero.
             if params[4] > 1:
                 return -np.inf
-            if params[4] < 1e-5:
+            if params[4] < 1e-10:
                 return -np.inf
             ptalpha = params[4]
         # LIGO prior: Gaussian on BBH merger rate with central value of the true value.
