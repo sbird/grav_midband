@@ -859,12 +859,12 @@ class PhaseTransition:
     def kkSW(self, alpha):
         """Efficiency coefficient for sound wave GW production, eq. 3.4"""
         aeff = self.alphaeff(alpha)
-        return aeff / alpha * aeff / (0.73 + 0.0083 * np.sqrt(aeff) + aeff)
+        return aeff / alpha * aeff / (0.73 + 0.083 * np.sqrt(aeff) + aeff)
 
     def Uff(self, alpha):
         """RMS fluid velocity Uf squared. This is approximate, see eq. 3.8 of 1903.09642"""
         aeff = self.alphaeff(alpha)
-        return 0.75 * aeff / (1 + aeff) * self.kkSW(alpha)
+        return np.sqrt(0.75 * aeff / (1 + aeff) * self.kkSW(alpha))
 
     def tauSW(self, cRs, Ts, alpha):
         """Sound wave optical depth"""
@@ -890,7 +890,7 @@ class PhaseTransition:
         #Make instantaneous reheating approximation
         Trh = Ts
         fss = self.fss(f, Ts, Trh)
-        return 1.67e-5 * self.h2 * (100 / gcorr(Trh))**(1./3.) * self.OmegaSWs(fss, cRs, Ts, alpha)
+        return 1.67e-5 / self.h2 * (100 / gcorr(Trh))**(1./3.) * self.OmegaSWs(fss, cRs, Ts, alpha)
 
     def ffTB(self, cRs, Ts):
         """Frequency of turbulent contributions"""
