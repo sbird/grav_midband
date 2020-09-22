@@ -885,13 +885,6 @@ class PhaseTransition:
         """Frequency at t*. Note we set Gamma_dec = H*. Eq. 4.7 of the ref."""
         return f * self.Hubble(Ts) * (100 / gcorr(Trh))**(1./6) * (100 / Trh) / 1.65e-5
 
-    def OmegaSW0(self, f, cRs, Ts, alpha):
-        """GW spectrum at present day"""
-        #Make instantaneous reheating approximation
-        Trh = Ts
-        fss = self.fss(f, Ts, Trh)
-        return 1.67e-5 / self.h2 * (100 / gcorr(Trh))**(1./3.) * self.OmegaSWs(fss, cRs, Ts, alpha)
-
     def ffTB(self, cRs, Ts):
         """Frequency of turbulent contributions"""
         return 3.9 / ((self.vw - self.cs) * self.Rs(cRs, Ts))
@@ -902,15 +895,7 @@ class PhaseTransition:
         ffdep = ffrat**3 * (1 + ffrat)**(-11/3.) / (1 + 8*math.pi*fs/self.Hubble(Ts))
         return 6.8 * cRs * (1 - self.Hubble(Ts) * self.tauSW(cRs, Ts, alpha)) * (self.kkSW(alpha)*alpha / (1 + alpha))**(3/2.) * ffdep
 
-    def OmegaTB0(self, fs, cRs, Ts, alpha):
-        """Omega Turbulent at t_*"""
-        #Make instantaneous reheating approximation
-        Trh = Ts
-        fss = self.fss(fs, Ts, Trh)
-        omegatbs = self.OmegaTBs(fss, cRs, Ts, alpha)
-        return 1.67e-5 * self.h2 * (100 / gcorr(Trh))**(1./3) * omegatbs
-
-    def OmegaGW(self, f, Ts, alpha=1):
+    def OmegaGW(self, f, Ts, alpha=1, beta=10):
         """Total OmegaGW: this is just sound wave dropping the subdominant bubbles and turbulence following 1910.13125.
         We pick alpha = 1 as a fiducial model. It can be from 0.5 to 4 ish.
         beta is beta/H and can be 0.01 < b/H < 1
@@ -919,7 +904,12 @@ class PhaseTransition:
         #Eq. 6 of 1910.13125
         beta = alpha**(1/0.8) / 10.
         cRs = (8 * math.pi)**(1./3) / beta * np.max([self.vw, self.cs])
-        return self.OmegaSW0(f, cRs, Ts, alpha) + self.OmegaTB0(f, cRs, Ts, alpha)
+        #Make instantaneous reheating approximation
+        Trh = Ts
+        fss = self.fss(f, Ts, Trh)
+        OmegaGWs = self.OmegaSWs(fss, cRs, Ts, alpha) + self.OmegaTBs(fss, cRs, Ts, alpha)
+        #GW spectrum at present day
+        return 1.65e-5 / self.h2 * (100 / gcorr(Trh))**(1./3.) * OmegaGWs
 
 def test_cs():
     """Simple test routine to check the cosmic string model matches the notebook"""
