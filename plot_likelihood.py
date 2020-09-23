@@ -38,9 +38,9 @@ def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None, stri
         ticklabels = {pnames[0] : [r"$10^{-20}$", r"$10^{-17}$", r"$10^{-15}$"]}
     else:
         ticks = {pnames[0]: [np.log(1e2), np.log(1e4), np.log(1e6), np.log(1e9), np.log(1e11)],
-                 pnames[4]: [np.log(1e-5), np.log(1e-3), np.log(0.1), 0]}
+                 pnames[4]: [np.log(1e-4), np.log(1e-3), np.log(1e-2), np.log(0.1), 0]}
         ticklabels = {pnames[0] : [r"$10^{2}$", r"$10^{4}$", r"$10^{6}$", r"$10^{9}$", r"$10^{11}$"],
-                      pnames[4]: [r"$10^{-5}$", r"$10^{-3}$", r"$0.1$", r"$1.0$"]}
+                      pnames[4]: [r"$10^{-4}$", r"$10^{-3}$", r"$0.01$", r"$0.1$", r"$1.0$"]}
 
     for pi in range(samples.shape[1]):
         for pi2 in range(pi + 1):
@@ -51,9 +51,14 @@ def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None, stri
             if pi == samples.shape[1]-1 and pnames[pi2] in ticks:
                 ax.set_xticks(ticks[pnames[pi2]])
                 ax.set_xticklabels(ticklabels[pnames[pi2]])
-            ax.axvline(true_parameter_values[pi2], color='gray', ls='--', lw=2)
+            if pi2 == 0 and pnames[pi] in ticks:
+                ax.set_yticks(ticks[pnames[pi]])
+                ax.set_yticklabels(ticklabels[pnames[pi]])
+            if not np.isnan(true_parameter_values[pi2]):
+                ax.axvline(true_parameter_values[pi2], color='gray', ls='--', lw=2)
             if pi2 < pi:
-                ax.axhline(true_parameter_values[pi], color='gray', ls='--', lw=2)
+                if not np.isnan(true_parameter_values[pi]):
+                    ax.axhline(true_parameter_values[pi], color='gray', ls='--', lw=2)
             #Plot alpha as log on the phase plot
 #     if not string:
 #         for pi in range(samples.shape[1]):
@@ -65,7 +70,7 @@ def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None, stri
 
 if __name__ == "__main__":
     #For PT
-    true_vals = [2, 56., 0.01, 1, -10]
+    true_vals = [np.nan, 56., 0.005, 1, np.nan]
     #ranges
     ranges = [[4.6, 20.8], [0, 100], [0,1], [0.1,10], [np.log(1e-10),0]]
     make_plot("samples_ligo_lisa_phase_bbh.txt", "like_ligo_lisa_phase_bbh.pdf", true_parameter_values = true_vals, ranges=ranges, string=False)
@@ -73,9 +78,10 @@ if __name__ == "__main__":
     make_plot("samples_ligo_lisa_decigo_phase_bbh.txt", "like_ligo_lisa_decigo_phase_bbh.pdf", true_parameter_values = true_vals, ranges=ranges, string=False)
 
     #For strings
-    true_vals = [0, 56., 0.01, 1]
+    true_vals = [np.nan, 56., 0.005, 1]
     #ranges
-    ranges = [[-50, np.log(2e-13)], [0, 100], [0,1], [1e-5,1]]
+    ranges = [[np.log(1e-20), np.log(2e-13)], [55.5, 56.5], [0.0048,0.0051], [0.985,1.015]]
     make_plot("samples_ligo_lisa_string_bbh.txt", "like_ligo_lisa_string_bbh.pdf", true_parameter_values = true_vals, ranges=ranges)
+    ranges = [[np.log(1e-20), np.log(2e-13)], [55.7, 56.3], [0.00495,0.00505], [0.995,1.005]]
     make_plot("samples_ligo_lisa_tiango_string_bbh.txt", "like_ligo_lisa_tiango_string_bbh.pdf", true_parameter_values = true_vals, ranges=ranges)
     make_plot("samples_ligo_lisa_decigo_string_bbh.txt", "like_ligo_lisa_decigo_string_bbh.pdf", true_parameter_values = true_vals, ranges=ranges)
