@@ -823,9 +823,7 @@ class PhaseTransition:
 
     This initially followed the models in: 1903.09642, 1809.08242.
     However, numerical simulations have indicated that bubble expansion does not follow the runaway models.
-    Hence we now use the models from 1910.13125 (PTPlot)
-    as well as the updated supercooled transitions 2007.15586 and especially
-    the recent review 2008.09136.
+    Hence we now use the models from 1910.13125 (PTPlot) as modified by 2007.08537 and summarised in 2008.09136.
 
     Assume Gamma_dec > H_* There are contributions from sound waves and from turbulence.
 
@@ -943,7 +941,8 @@ class PhaseTransition:
 
     def cRs(self, beta):
         """Comoving bubble size"""
-        return (8 * math.pi)**(1./3) / beta * np.max([self.vw, self.cs])
+        #1910.13125 has max(vw, cs) but 2007.08537 just uses vw.
+        return (8 * math.pi)**(1./3) / beta * self.vw
 
     def OmegaGW(self, f, Ts, alpha=1, beta=20, turb=True):
         """Total OmegaGW: this is just sound wave dropping the subdominant bubbles and turbulence following 1910.13125.
