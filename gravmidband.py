@@ -909,7 +909,6 @@ class PhaseTransition:
         #Turbulence should be included.
         #This is the most likely case.
         taush = self.tauSW(cRs, alpha)
-
         if taush < 1:
             #eq. 32
             omegasw *= taush
@@ -923,13 +922,20 @@ class PhaseTransition:
 
     def ffTB(self, cRs, Ts):
         """Frequency of turbulent contributions"""
-        return 3.9 / ((self.vw - self.cs) * self.bubbleRs(cRs, Ts))
+        #Source: 2007.15586.
+        #This is not the same as the model implemented in PTPlot,
+        #but I cannot find a reference.
+        #2008.09136 says that models do not match simulations, so
+        #this is likely wrong, but the scaling should be correct.
+        return 1.5 * self.ffp0(cRs, Ts)
 
-    def OmegaTBs(self, fs, cRs, Ts, alpha):
+    def OmegaTB0(self, fs, cRs, Ts, alpha):
         """Omega Turbulent at t*"""
         ffrat = fs / self.ffTB(cRs, Ts)
+        #Source: eq. 5.7 of 2007.15586
+        # This model is probably wrong!
         ffdep = ffrat**3 * (1 + ffrat)**(-11/3.) / (1 + 8*math.pi*fs/self.Hubble(Ts))
-        return 6.8 * cRs * (1 - self.Hubble(Ts) * self.tauSW(cRs, alpha)) * (self.kkSW(alpha)*alpha / (1 + alpha))**(3/2.) * ffdep
+        return self.Fevol(Ts) * 6.85 * cRs * (1 - self.tauSW(cRs, alpha)) * self.kinetic(alpha)**(3/2.) * ffdep
 
     def Fevol(self, Trh):
         """Factor to evolve Omega at decoupling to present day"""
@@ -939,7 +945,7 @@ class PhaseTransition:
         """Comoving bubble size"""
         return (8 * math.pi)**(1./3) / beta * np.max([self.vw, self.cs])
 
-    def OmegaGW(self, f, Ts, alpha=1, beta=20, turb=True, sw=True):
+    def OmegaGW(self, f, Ts, alpha=1, beta=20, turb=True):
         """Total OmegaGW: this is just sound wave dropping the subdominant bubbles and turbulence following 1910.13125.
         We pick alpha = 1 as a fiducial model. It can be from 0.5 to 4 ish.
         beta is beta/H and can be 0.01 < b/H < 1
@@ -948,11 +954,9 @@ class PhaseTransition:
         #Eq. 6 of 1910.13125
         #beta = alpha**(1/0.8) * 10.
         cRs = self.cRs(beta)
-        OmegaGW = np.zeros_like(f)
-        if sw:
-            OmegaGW += self.OmegaSW0(f, cRs, Ts, alpha)
+        OmegaGW = self.OmegaSW0(f, cRs, Ts, alpha)
         if turb:
-            OmegaGW += self.OmegaTBs(f, cRs, Ts, alpha)
+            OmegaGW += self.OmegaTB0(f, cRs, Ts, alpha)
         #GW spectrum at present day
         return OmegaGW
 
