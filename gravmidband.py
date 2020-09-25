@@ -10,6 +10,7 @@ import emcee
 import pint
 import scipy.interpolate
 import scipy.integrate
+import shutil
 
 ureg = pint.UnitRegistry()
 
@@ -460,7 +461,8 @@ class Likelihoods:
             emcee_sampler.run_mcmc(pos, nsamples)
             gr = gelman_rubin(emcee_sampler.chain)
             print("Total samples:",nsamples," Gelman-Rubin: ",gr)
-            np.savetxt(savefile, emcee_sampler.flatchain)
+            np.savetxt(savefile+".tmp", emcee_sampler.flatchain)
+            shutil.move(savefile+".tmp", savefile)
             count += 1
             if while_loop is False:
                 break
