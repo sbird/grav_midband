@@ -5,12 +5,12 @@ Neglect neutron stars because in the LISA band they are just a (small) rescaling
 LISA-specific SGWB from high redshift supermassive BH mergers, EMRIs or IMBHs
 """
 import math
+import shutil
 import numpy as np
 import emcee
 import pint
 import scipy.interpolate
 import scipy.integrate
-import shutil
 
 ureg = pint.UnitRegistry()
 
@@ -250,11 +250,11 @@ class SGWBExperiment:
             return 0
         return self.cstring.OmegaGW(self.freq, Gmu)
 
-    def phasemodel(self, Ts, alpha):
+    def phasemodel(self, Ts, alpha, beta):
         """The phase transition SGWB model."""
         if self.phase is None:
             return 0
-        return self.phase.OmegaGW(self.freq, Ts, alpha = alpha)
+        return self.phase.OmegaGW(self.freq, Ts, alpha = alpha, beta=beta)
 
     def imrimodel(self, amp):
         """IMRI model"""
@@ -282,7 +282,7 @@ class SGWBExperiment:
         https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.116.131102"""
         return amp * self.bbh_singleamp
 
-    def omegamodel(self, cosmo, bbhamp, imriamp=0, emriamp=0, ptalpha = 1):
+    def omegamodel(self, cosmo, bbhamp, imriamp=0, emriamp=0, ptalpha = 1, ptbeta = 1):
         """Construct a model with three free parameters,
            combining multiple SGWB sources:
            Strings, BBH (LIGO) and BBH (IMRI)."""
@@ -290,7 +290,7 @@ class SGWBExperiment:
         if self.cstring is not None:
             cos = self.cosmicstringmodel(cosmo)
         elif self.phase is not None:
-            cos = self.phasemodel(cosmo, alpha = ptalpha)
+            cos = self.phasemodel(cosmo, alpha = ptalpha, beta=ptbeta)
         return cos + self.imrimodel(imriamp) + self.bhbinarymerger(bbhamp) + self.emrimodel(emriamp)
 
 class PowerLawSensitivity:
@@ -389,6 +389,7 @@ class Likelihoods:
         if params[3] < 0:
             return - np.inf
         ptalpha = 1
+        ptbeta = 1
         #CS string tension limit from EPTA
         if self.cstring is not None:
             if params[0] > np.log(2.e-11):
@@ -428,7 +429,7 @@ class Likelihoods:
         llike = 0
 
         for exp in self.experiments:
-            model = exp.omegamodel(cosmo = np.exp(params[0]), bbhamp = params[1], imriamp = params[2],emriamp=params[3], ptalpha=ptalpha)
+            model = exp.omegamodel(cosmo = np.exp(params[0]), bbhamp = params[1], imriamp = params[2],emriamp=params[3], ptalpha=ptalpha, ptbeta=ptbeta)
             llike += - 1 * exp.length * np.trapz(((model - exp.mockdata)/ exp.omegasens)**2, x=exp.freq)
             #like += ampprior * np.size(exp.freq)
         #print(np.exp(params[0]), like)
@@ -911,7 +912,6 @@ class PhaseTransition:
         #Note cRs = R* H* as in the paper.
         ffrat = f / self.ffp0(cRs, Ts)
         KK = self.kinetic(alpha)
-        hubstar = self.Hubble(Ts)
         #Comes from simulations
         omtilde = 0.012
         #eq. 29
