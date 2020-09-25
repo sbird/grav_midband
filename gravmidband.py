@@ -398,16 +398,27 @@ class Likelihoods:
         elif self.phase is not None:
             #Phase transition energy: lower limit so that it lies well inside the LISA band
             #Upper limit so it lies within LIGO band
-            if params[0] > np.log(1e11):
+            if params[0] > np.log(1e8):
                 return -np.inf
             if params[0] < np.log(1e2):
                 return -np.inf
-            #alpha: upper limit set by plausible physical values,
-            #lower limit just something slightly above zero.
-            ptalpha = np.exp(params[4])
-            if ptalpha > 1:
+            #alpha: upper limit set by plausible physical values:
+            #2008.09136 says that models are reliable for alpha < 0.1
+            #alpha > 1 is inflation.
+            #Higher values are easily ruled out by LISA anyway, so set alpha < 0.4
+            #Set the lower limit to a value just below where our constraints lie.
+            ptalpha = params[4]
+            if ptalpha > 0.4:
                 return -np.inf
-            if ptalpha < 1e-10:
+            if ptalpha < 1e-3:
+                return -np.inf
+            #beta: Should be > 1 as very slow phase transitions
+            #probably have their GW emission suppressed.
+            #Too fast and the signal is extremely small anyway.
+            ptbeta = params[5]
+            if ptbeta > 1e3:
+                return -np.inf
+            if ptbeta < 1:
                 return -np.inf
         # LIGO prior: Gaussian on BBH merger rate with central value of the true value.
         # Remove this: it may be that the unresolved high redshift binaries merge
@@ -432,8 +443,8 @@ class Likelihoods:
             #Priors are assumed to be in the middle.
             cent = np.array([-40, 55, 0.05, 1])
         elif self.phase is not None:
-            pr = np.array([10, 100, 0.1, 2, np.log(0.2)])
-            cent = np.array([9, 100, 0.1, 1, np.log(0.2)])
+            pr = np.array([10, 100, 0.1, 2, 0.05, 20])
+            cent = np.array([9, 100, 0.1, 1, 0.1, 100])
         p0 = [cent+2*pr/16.*np.random.rand(len(pr))-pr/16. for _ in range(nwalkers)]
         lnk0 = np.array([self.lnlikelihood(pp) for pp in p0])
         assert np.all(np.isfinite(lnk0))
