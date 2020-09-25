@@ -421,7 +421,7 @@ class Likelihoods:
             #beta: Should be > 1 as very slow phase transitions
             #probably have their GW emission suppressed.
             #Too fast and the signal is extremely small anyway.
-            if len(params) > 4:
+            if np.size(params) > 5:
                 ptbeta = params[5]
                 if ptbeta > 100:
                     return -np.inf
