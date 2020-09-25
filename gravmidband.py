@@ -943,13 +943,13 @@ class PhaseTransition:
         #this is likely wrong, but the scaling should be correct.
         return 1.5 * self.ffp0(cRs, Ts)
 
-    def OmegaTB0(self, fs, cRs, Ts, alpha):
+    def OmegaTB0(self, fs, cRs, Ts, alpha, beta):
         """Omega Turbulent at t*"""
         ffrat = fs / self.ffTB(cRs, Ts)
         #Source: eq. 5.7 of 2007.15586
         # This model is probably wrong!
         ffdep = ffrat**3 * (1 + ffrat)**(-11/3.) / (1 + 8*math.pi*fs/self.Hubble(Ts))
-        return self.Fevol(Ts) * 6.85 * cRs * np.max([0,1 - self.tauSW(cRs, alpha)]) * self.kinetic(alpha)**(3/2.) * ffdep
+        return self.Fevol(Ts) * 6.85 * self.vw / beta * self.kinetic(alpha)**(3/2.) * ffdep #* np.max([0,1 - self.tauSW(cRs, alpha)])
 
     def Fevol(self, Trh):
         """Factor to evolve Omega at decoupling to present day"""
@@ -960,7 +960,7 @@ class PhaseTransition:
         #1910.13125 has max(vw, cs) but 2007.08537 just uses vw.
         return (8 * math.pi)**(1./3) / beta * self.vw
 
-    def OmegaGW(self, f, Ts, alpha=1, beta=20, turb=True):
+    def OmegaGW(self, f, Ts, alpha=1, beta=20, turb=False):
         """Total OmegaGW: this is just sound wave dropping the subdominant bubbles and turbulence following 1910.13125.
         We pick alpha = 1 as a fiducial model. It can be from 0.5 to 4 ish.
         beta is beta/H and can be 0.01 < b/H < 1
@@ -971,7 +971,7 @@ class PhaseTransition:
         cRs = self.cRs(beta)
         OmegaGW = self.OmegaSW0(f, cRs, Ts, alpha)
         if turb:
-            OmegaGW += self.OmegaTB0(f, cRs, Ts, alpha)
+            OmegaGW += self.OmegaTB0(f, cRs, Ts, alpha, beta)
         #GW spectrum at present day
         return OmegaGW
 
