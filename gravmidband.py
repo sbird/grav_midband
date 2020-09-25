@@ -380,6 +380,7 @@ class Likelihoods:
         2 - IMRI merger rate amplitude
         3 - EMRI merger rate amplitude
         4 - PT amplitude alpha (if phase is not None)
+        5 - PT speed beta (if phase is not None)
         """
         #Priors: positive BBH merger rate
         if params[1] < 0:
@@ -948,7 +949,7 @@ class PhaseTransition:
         #Source: eq. 5.7 of 2007.15586
         # This model is probably wrong!
         ffdep = ffrat**3 * (1 + ffrat)**(-11/3.) / (1 + 8*math.pi*fs/self.Hubble(Ts))
-        return self.Fevol(Ts) * 6.85 * cRs * (1 - self.tauSW(cRs, alpha)) * self.kinetic(alpha)**(3/2.) * ffdep
+        return self.Fevol(Ts) * 6.85 * cRs * np.max([0,1 - self.tauSW(cRs, alpha)]) * self.kinetic(alpha)**(3/2.) * ffdep
 
     def Fevol(self, Trh):
         """Factor to evolve Omega at decoupling to present day"""
