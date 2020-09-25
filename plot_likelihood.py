@@ -65,7 +65,7 @@ if __name__ == "__main__":
     #For PT
     true_vals = [np.nan, 56., 0.005, 1, np.nan, np.nan]
     #ranges
-    ptranges = [[4.6, 20.8], [0, 100], [0,1], [0.1,10], [np.log(1e-10),0]]
+    ptranges = [[4.6, 20.8], [0, 100], [0,1], [0.1,10], [np.log(1e-10),0], [1, 1000]]
     make_plot("samples_ligo_lisa_phase_bbh.txt", "like_ligo_lisa_phase_bbh.pdf", true_parameter_values = true_vals, ranges=ptranges, string=False)
     make_plot("samples_ligo_lisa_tiango_phase_bbh.txt", "like_ligo_lisa_tiango_phase_bbh.pdf", true_parameter_values = true_vals, ranges=ptranges, string=False)
     make_plot("samples_ligo_lisa_decigo_phase_bbh.txt", "like_ligo_lisa_decigo_phase_bbh.pdf", true_parameter_values = true_vals, ranges=ptranges, string=False)
