@@ -217,7 +217,7 @@ def make_pt_plot():
     #plt.loglog(goff, gopo, "-", color="black", label="LIGO")
     plot_detector_fill()
 
-    freqs = np.logspace(-7, 4, 50)
+    freqs = np.logspace(-7, 4, 150)
 
     csgw = gravmidband.PhaseTransition()
     #omegacs = csgw.OmegaGW(freqs, Ts=1, alpha=0.3)
@@ -229,20 +229,23 @@ def make_pt_plot():
     #omegacs = csgw.OmegaGW(freqs, Ts=0.1)
     #plt.loglog(freqs, omegacs, ":", color="grey", label=r"PT: $T_* = 10^{-1} \;\mathrm{GeV}$")
 
-    omegacs = csgw.OmegaGW(freqs, Ts=1e9, alpha=0.01)
-    plt.loglog(freqs, omegacs, "-", color="brown", label=r"$T_* = 10^{9}$ GeV $\alpha=0.01$")
+    omegacs = csgw.OmegaGW(freqs, Ts=1e3, alpha=0.01, beta=10)
+    plt.loglog(freqs, omegacs, "-", color="brown", label=r"$\alpha=0.01$")
 
-    omegacs = csgw.OmegaGW(freqs, Ts=1e5, alpha=0.1)
-    plt.loglog(freqs, omegacs, "-", color="pink", label=r"$T_* = 10^{5}$ GeV $\alpha=0.1$")
+    omegacs = csgw.OmegaGW(freqs, Ts=1e3, alpha=0.1, beta=100)
+    plt.loglog(freqs, omegacs, "-", color="pink", label=r"$\beta = 100$")
 
-    omegacs = csgw.OmegaGW(freqs, Ts=1e5, alpha=0.01)
-    plt.loglog(freqs, omegacs, ":", color="grey", label=r"$T_* = 10^{5}$ GeV $\alpha=0.01$")
+    omegacs = csgw.OmegaGW(freqs, Ts=1e5, alpha=0.1, beta=10)
+    plt.loglog(freqs, omegacs, ":", color="grey", label=r"$T_* = 10^{5}$ GeV")
+
+    omegacs = csgw.OmegaGW(freqs, Ts=1e7, alpha=0.1, beta=10)
+    plt.loglog(freqs, omegacs, ":", color="blue", label=r"$T_* = 10^{7}$ GeV")
 
     #omegacs = csgw.OmegaGW(freqs, Ts=1e4, alpha=10)
     #plt.loglog(freqs, omegacs, "-", color="orange", label=r"PT: $\alpha=10 T_* = 10^{4} \;\mathrm{GeV}$")
 
-    omegacs = csgw.OmegaGW(freqs, Ts=1e9, alpha=0.1)
-    plt.loglog(freqs, omegacs, "-", color="green", label=r"$T_* = 10^{9}$ GeV $\alpha = 0.1$")
+    omegacs = csgw.OmegaGW(freqs, Ts=1e3, alpha=0.1, beta=10)
+    plt.loglog(freqs, omegacs, "-", color="green", label=r"Fiducial")
 
     #omegacs = csgw.OmegaGW(freqs, Ts=1e6, alpha=1.5)
     #plt.loglog(freqs, omegacs, "-", color="green", label=r"PT: $T_* = 10^{6} \;\mathrm{GeV}$")
