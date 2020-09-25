@@ -419,7 +419,7 @@ class Likelihoods:
             #probably have their GW emission suppressed.
             #Too fast and the signal is extremely small anyway.
             ptbeta = params[5]
-            if ptbeta > 1e3:
+            if ptbeta > 100:
                 return -np.inf
             if ptbeta < 1:
                 return -np.inf
@@ -446,8 +446,8 @@ class Likelihoods:
             #Priors are assumed to be in the middle.
             cent = np.array([-40, 55, 0.05, 1])
         elif self.phase is not None:
-            pr = np.array([10, 100, 0.1, 2, 0.05, 20])
-            cent = np.array([9, 100, 0.1, 1, 0.1, 100])
+            pr = np.array([10, 100, 0.1, 2, 0.05, 2])
+            cent = np.array([9, 100, 0.1, 1, 0.1, 10])
         p0 = [cent+2*pr/16.*np.random.rand(len(pr))-pr/16. for _ in range(nwalkers)]
         lnk0 = np.array([self.lnlikelihood(pp) for pp in p0])
         assert np.all(np.isfinite(lnk0))
