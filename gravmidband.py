@@ -832,10 +832,12 @@ class PhaseTransition:
     GW from turbulence: important if SW period is much shorter than 1 Hubble time, corresponds to plasma entering non-linear regime after oscillation (SW) period. Decreasing cRs->increasing turbulance contribution relative to SW.
 
     alpha from 0.01 to 30?
+
+    See also 2007.08537 which gives the correct modern equations.
     """
     def __init__(self):
-        #Models in 2008.09136 are tested for vw = 0.4 - 0.5
-        self.vw = 1
+        #2008.09136 says models are tested for vw = 0.4 - 0.5
+        self.vw = 0.5
         #Speed of light = 1
         self.cs = 1/np.sqrt(3)
         hub = 0.679
