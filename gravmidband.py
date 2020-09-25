@@ -819,8 +819,15 @@ class CosmicStringGWB:
         return P4R
 
 class PhaseTransition:
-    """Model for the gravitational wave contribution from phase transitions. From Yanou's notebook. See for reference:
-    1903.09642, 1809.08242. Assume Gamma_dec > H_* There are contributions from sound waves and from turbulence.
+    """Model for the gravitational wave contribution from phase transitions.
+
+    This initially followed the models in: 1903.09642, 1809.08242.
+    However, numerical simulations have indicated that bubble expansion does not follow the runaway models.
+    Hence we now use the models from 1910.13125 (PTPlot)
+    as well as the updated supercooled transitions 2007.15586 and especially
+    the recent review 2008.09136.
+
+    Assume Gamma_dec > H_* There are contributions from sound waves and from turbulence.
 
     For sound waves: for fixed overall energy scale, if alpha inc then Ts dec  and cRs inc. alpha: strength of the PT.
 
@@ -829,7 +836,7 @@ class PhaseTransition:
     alpha from 0.01 to 30?
     """
     def __init__(self):
-        #See 1004.4187 for vw != 1
+        #Models in 2008.09136 are tested for vw = 0.4 - 0.5
         self.vw = 1
         #Speed of light = 1
         self.cs = 1/np.sqrt(3)
@@ -847,7 +854,7 @@ class PhaseTransition:
         """Hubble rate at high temperatures"""
         return 1.66 * np.sqrt(gcorr(T)) * T**2 / self.Mp
 
-    def Rs(self, cRs, Ts):
+    def bubbleRs(self, cRs, Ts):
         """Bubble size at t*"""
         return cRs / self.Hubble(Ts)
 
@@ -861,55 +868,93 @@ class PhaseTransition:
         aeff = self.alphaeff(alpha)
         return aeff / alpha * aeff / (0.73 + 0.083 * np.sqrt(aeff) + aeff)
 
-    def Uff(self, alpha):
+    def Uff2(self, alpha):
         """RMS fluid velocity Uf squared. This is approximate, see eq. 3.8 of 1903.09642"""
         aeff = self.alphaeff(alpha)
-        return np.sqrt(0.75 * aeff / (1 + aeff) * self.kkSW(alpha))
+        return 0.75 * aeff / (1 + aeff) * self.kkSW(alpha)
 
-    def tauSW(self, cRs, Ts, alpha):
-        """Sound wave optical depth"""
-        return np.min([1/self.Hubble(Ts), self.Rs(cRs, Ts)/self.Uff(alpha)])
+    def ffp0(self, cRs, Ts):
+        """Peak sound wave frequency today. eq 8.22 of 2008.09136 and eq. 31 of 1910.13125"""
+        #We set Trh = Ts, instantanteous reheating.
+        return 2.6e-5 / cRs * self.fss(Ts)
 
-    def ffSW(self, cRs, Ts):
-        """Sound wave frequency"""
-        return 3.4 / ((self.vw - self.cs) * self.Rs(cRs, Ts))
+    def tauSW(self, cRs, alpha):
+        """Sound wave optical depth tau_SH see 1910.13125, eq. 32"""
+        #Note that 1910.13125 says that this should
+        #be cRs/ sqrt(K) = cRs / sqrt(4/3 Uff2), but the reference
+        #1809.08242 says cRs / sqrt(Uff2) which is also what is implemented in their PTPlot code.
+        return cRs / np.sqrt(self.Uff2(alpha))
 
-    def OmegaSWs(self, fs, cRs, Ts, alpha):
-        """GW spectrum at percolation time t*"""
-        tauSW = self.tauSW(cRs, Ts, alpha)
-        ffrat = fs / self.ffSW(cRs, Ts)
+    def kinetic(self,alpha):
+        """Kinetic energy in the PT"""
+        return 4./3. * self.Uff2(alpha)
+
+    def CCshape(self, s):
+        """The shape function, see 8.25 of 2008.09136 and eq. 30 of 1910.13125"""
+        return s**3 * (7 / ( 4 + 3 * s**2))**(7./2)
+
+    def OmegaSW0(self, f, cRs, Ts, alpha):
+        """GW spectrum at present day. See Eq. 32 /29 of 1910.13125 and 8.24 of 2008.09136"""
         #Note cRs = R* H* as in the paper.
-        return 0.38 * cRs * self.Hubble(Ts) * tauSW * (self.kkSW(alpha) * alpha / (1 + alpha))**2 * ffrat**3 / ( 1 + 0.75 * ffrat**2)**(7./2)
+        ffrat = f / self.ffp0(cRs, Ts)
+        KK = self.kinetic(alpha)
+        hubstar = self.Hubble(Ts)
+        #Comes from simulations
+        omtilde = 0.012
+        #eq. 29
+        # Note there is a typo in eq.29 : it reads 1 / cs where it should be 1/ cs^2.
+        #2008.09136 has the correct value and PTPlot implements it right.
+        omegasw = 0.687 * self.Fevol(Ts) * omtilde * KK**2 * self.CCshape(ffrat) * (cRs / self.cs**2)
+        #If shock formation is less than a hubble time, use eq. 32.
+        #Turbulence should be included.
+        #This is the most likely case.
+        taush = self.tauSW(cRs, alpha)
 
-    def fss(self, f, Ts, Trh):
-        """Frequency at t*. Note we set Gamma_dec = H*. Eq. 4.7 of the ref."""
-        return f * self.Hubble(Ts) * (100 / gcorr(Trh))**(1./6) * (100 / Trh) / 1.65e-5
+        if taush < 1:
+            #eq. 32
+            omegasw *= taush
+        return omegasw
+
+    def fss(self, Trh):
+        """Conversion factor for frequency between t*. and today.
+           a_* / a_0
+           Note we set Gamma_dec = H*."""
+        return (Trh / 100) * (gcorr(Trh) / 100)**(1./6)
 
     def ffTB(self, cRs, Ts):
         """Frequency of turbulent contributions"""
-        return 3.9 / ((self.vw - self.cs) * self.Rs(cRs, Ts))
+        return 3.9 / ((self.vw - self.cs) * self.bubbleRs(cRs, Ts))
 
     def OmegaTBs(self, fs, cRs, Ts, alpha):
         """Omega Turbulent at t*"""
         ffrat = fs / self.ffTB(cRs, Ts)
         ffdep = ffrat**3 * (1 + ffrat)**(-11/3.) / (1 + 8*math.pi*fs/self.Hubble(Ts))
-        return 6.8 * cRs * (1 - self.Hubble(Ts) * self.tauSW(cRs, Ts, alpha)) * (self.kkSW(alpha)*alpha / (1 + alpha))**(3/2.) * ffdep
+        return 6.8 * cRs * (1 - self.Hubble(Ts) * self.tauSW(cRs, alpha)) * (self.kkSW(alpha)*alpha / (1 + alpha))**(3/2.) * ffdep
 
-    def OmegaGW(self, f, Ts, alpha=1, beta=10):
+    def Fevol(self, Trh):
+        """Factor to evolve Omega at decoupling to present day"""
+        return 1.65e-5 / self.h2 * (100 / gcorr(Trh))**(1./3.)
+
+    def cRs(self, beta):
+        """Comoving bubble size"""
+        return (8 * math.pi)**(1./3) / beta * np.max([self.vw, self.cs])
+
+    def OmegaGW(self, f, Ts, alpha=1, beta=20, turb=True, sw=True):
         """Total OmegaGW: this is just sound wave dropping the subdominant bubbles and turbulence following 1910.13125.
         We pick alpha = 1 as a fiducial model. It can be from 0.5 to 4 ish.
         beta is beta/H and can be 0.01 < b/H < 1
         Ts is in GeV and can have a variety of values."""
-        #Eyeballing the right panel of Figure 17 of 1809.08242 gives alpha = (10 beta/H)^0.8
+        #Eyeballing the right panel of Figure 17 of 1809.08242 gives alpha = (beta/H/10)^0.8
         #Eq. 6 of 1910.13125
-        beta = alpha**(1/0.8) / 10.
-        cRs = (8 * math.pi)**(1./3) / beta * np.max([self.vw, self.cs])
-        #Make instantaneous reheating approximation
-        Trh = Ts
-        fss = self.fss(f, Ts, Trh)
-        OmegaGWs = self.OmegaSWs(fss, cRs, Ts, alpha) + self.OmegaTBs(fss, cRs, Ts, alpha)
+        #beta = alpha**(1/0.8) * 10.
+        cRs = self.cRs(beta)
+        OmegaGW = np.zeros_like(f)
+        if sw:
+            OmegaGW += self.OmegaSW0(f, cRs, Ts, alpha)
+        if turb:
+            OmegaGW += self.OmegaTBs(f, cRs, Ts, alpha)
         #GW spectrum at present day
-        return 1.65e-5 / self.h2 * (100 / gcorr(Trh))**(1./3.) * OmegaGWs
+        return OmegaGW
 
 def test_cs():
     """Simple test routine to check the cosmic string model matches the notebook"""
