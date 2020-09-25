@@ -250,7 +250,7 @@ class SGWBExperiment:
             return 0
         return self.cstring.OmegaGW(self.freq, Gmu)
 
-    def phasemodel(self, Ts, alpha, beta):
+    def phasemodel(self, Ts, alpha, beta=40):
         """The phase transition SGWB model."""
         if self.phase is None:
             return 0
@@ -282,7 +282,7 @@ class SGWBExperiment:
         https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.116.131102"""
         return amp * self.bbh_singleamp
 
-    def omegamodel(self, cosmo, bbhamp, imriamp=0, emriamp=0, ptalpha = 1, ptbeta = 1):
+    def omegamodel(self, cosmo, bbhamp, imriamp=0, emriamp=0, ptalpha = 1, ptbeta = 40):
         """Construct a model with three free parameters,
            combining multiple SGWB sources:
            Strings, BBH (LIGO) and BBH (IMRI)."""
@@ -390,7 +390,10 @@ class Likelihoods:
         if params[3] < 0:
             return - np.inf
         ptalpha = 1
-        ptbeta = 1
+        #Set default ptbeta value to something high
+        #enough that turbulence probably doesn't matter and
+        #low enough that the sound waves last longer than a Hubble time.
+        ptbeta = 40
         #CS string tension limit from EPTA
         if self.cstring is not None:
             if params[0] > np.log(2.e-11):
@@ -403,7 +406,7 @@ class Likelihoods:
             #Upper limit so it lies within LIGO band
             if params[0] > np.log(1e8):
                 return -np.inf
-            if params[0] < np.log(1e2):
+            if params[0] < np.log(1e4):
                 return -np.inf
             #alpha: upper limit set by plausible physical values:
             #2008.09136 says that models are reliable for alpha < 0.1
@@ -411,18 +414,19 @@ class Likelihoods:
             #Higher values are easily ruled out by LISA anyway, so set alpha < 0.4
             #Set the lower limit to a value just below where our constraints lie.
             ptalpha = params[4]
-            if ptalpha > 0.4:
+            if ptalpha > 0.8:
                 return -np.inf
             if ptalpha < 1e-3:
                 return -np.inf
             #beta: Should be > 1 as very slow phase transitions
             #probably have their GW emission suppressed.
             #Too fast and the signal is extremely small anyway.
-            ptbeta = params[5]
-            if ptbeta > 100:
-                return -np.inf
-            if ptbeta < 1:
-                return -np.inf
+            if len(params) > 4:
+                ptbeta = params[5]
+                if ptbeta > 100:
+                    return -np.inf
+                if ptbeta < 1:
+                    return -np.inf
         # LIGO prior: Gaussian on BBH merger rate with central value of the true value.
         # Remove this: it may be that the unresolved high redshift binaries merge
         # at a different rate to the low redshift ones and so we should allow a free amplitude
@@ -446,8 +450,8 @@ class Likelihoods:
             #Priors are assumed to be in the middle.
             cent = np.array([-40, 55, 0.05, 1])
         elif self.phase is not None:
-            pr = np.array([10, 100, 0.1, 2, 0.05, 2])
-            cent = np.array([9, 100, 0.1, 1, 0.1, 10])
+            pr = np.array([10, 100, 0.1, 2, 0.05])
+            cent = np.array([9, 100, 0.1, 1, 0.1])
         p0 = [cent+2*pr/16.*np.random.rand(len(pr))-pr/16. for _ in range(nwalkers)]
         lnk0 = np.array([self.lnlikelihood(pp) for pp in p0])
         assert np.all(np.isfinite(lnk0))
@@ -960,7 +964,7 @@ class PhaseTransition:
         #1910.13125 has max(vw, cs) but 2007.08537 just uses vw.
         return (8 * math.pi)**(1./3) / beta * self.vw
 
-    def OmegaGW(self, f, Ts, alpha=1, beta=20, turb=False):
+    def OmegaGW(self, f, Ts, alpha=1, beta=40, turb=False):
         """Total OmegaGW: this is just sound wave dropping the subdominant bubbles and turbulence following 1910.13125.
         We pick alpha = 1 as a fiducial model. It can be from 0.5 to 4 ish.
         beta is beta/H and can be 0.01 < b/H < 1

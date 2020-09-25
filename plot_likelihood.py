@@ -37,9 +37,9 @@ def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None, stri
         ticks = {pnames[0]: [np.log(1e-20), np.log(1e-17), np.log(1e-15)]}
         ticklabels = {pnames[0] : [r"$10^{-20}$", r"$10^{-17}$", r"$10^{-15}$"]}
     else:
-        ticks = {pnames[0]: [np.log(1e2), np.log(1e4), np.log(1e6), np.log(1e8)]}#, np.log(1e11)
+        ticks = {pnames[0]: [np.log(1e4), np.log(1e6), np.log(1e8)]}#, np.log(1e11)
                  #pnames[4]: [np.log(1e-4), np.log(1e-3), np.log(1e-2), np.log(0.1), 0]}
-        ticklabels = {pnames[0] : [r"$10^{2}$", r"$10^{4}$", r"$10^{6}$", r"$10^{8}$"]}#, r"$10^{11}$"]},
+        ticklabels = {pnames[0] : [r"$10^{4}$", r"$10^{6}$", r"$10^{8}$"]}#, r"$10^{11}$"]},
                       #pnames[4]: [r"$10^{-4}$", r"$10^{-3}$", r"$0.01$", r"$0.1$", r"$1.0$"]}
 
     for pi in range(samples.shape[1]):
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     #For PT
     true_vals = [np.nan, 56., 0.005, 1, np.nan, np.nan]
     #ranges
-    ptranges = [[4.6, 18.42], [0, 100], [0,1], [0.1,10], [0.001,0.4], [1, 1000]]
+    ptranges = [[4.6, 18.42], [0, 100], [0,1], [0.1,10], [0.001,0.4]]#, [1, 1000]]
     make_plot("samples_ligo_lisa_phase_bbh.txt", "like_ligo_lisa_phase_bbh.pdf", true_parameter_values = true_vals, ranges=ptranges, string=False)
     make_plot("samples_ligo_lisa_tiango_phase_bbh.txt", "like_ligo_lisa_tiango_phase_bbh.pdf", true_parameter_values = true_vals, ranges=ptranges, string=False)
     make_plot("samples_ligo_lisa_decigo_phase_bbh.txt", "like_ligo_lisa_decigo_phase_bbh.pdf", true_parameter_values = true_vals, ranges=ptranges, string=False)
