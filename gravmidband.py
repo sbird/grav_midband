@@ -450,8 +450,8 @@ class Likelihoods:
             #Priors are assumed to be in the middle.
             cent = np.array([-40, 55, 0.05, 1])
         elif self.phase is not None:
-            pr = np.array([10, 100, 0.1, 2, 0.05])
-            cent = np.array([9, 100, 0.1, 1, 0.1])
+            pr = np.array([2, 100, 0.1, 2, 0.05])
+            cent = np.array([13, 100, 0.1, 1, 0.1])
         p0 = [cent+2*pr/16.*np.random.rand(len(pr))-pr/16. for _ in range(nwalkers)]
         lnk0 = np.array([self.lnlikelihood(pp) for pp in p0])
         assert np.all(np.isfinite(lnk0))
