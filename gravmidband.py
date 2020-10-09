@@ -404,9 +404,9 @@ class Likelihoods:
         elif self.phase is not None:
             #Phase transition energy: lower limit so that it lies well inside the LISA band
             #Upper limit so it lies within LIGO band
-            if params[0] > np.log(1e8):
+            if params[0] > np.log(1e7):
                 return -np.inf
-            if params[0] < np.log(1e4):
+            if params[0] < np.log(1e2):
                 return -np.inf
             #alpha: upper limit set by plausible physical values:
             #2008.09136 says that models are reliable for alpha < 0.1

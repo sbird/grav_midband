@@ -13,7 +13,7 @@ def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None, stri
     if string:
         pnames = [ r"G\mu", r"\mathrm{SMBBH}", r"\mathrm{IMRI}", r"\mathrm{EMRI}"]
     else:
-        pnames = [ r"T_\ast", r"\mathrm{SMBBH}", r"\mathrm{IMRI}", r"\mathrm{EMRI}", r"\alpha", r"\beta"]
+        pnames = [ r"T_\ast", r"\mathrm{SMBBH}", r"\mathrm{IMRI}", r"\mathrm{EMRI}", r"\alpha"]#, r"\beta"]
     prange = None
     if ranges is not None:
         prange = {pnames[i] : ranges[i] for i in range(len(pnames))}
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     #For PT
     true_vals = [np.nan, 56., 0.005, 1, np.nan, np.nan]
     #ranges
-    ptranges = [[4.6, 18.42], [0, 100], [0,1], [0.1,10], [0.001,0.4]]#, [1, 1000]]
+    ptranges = [[np.log(100), np.log(1e7)], [0, 100], [0,1], [0.1,10], [0.001,0.8]]#, [1, 1000]]
     make_plot("samples_ligo_lisa_phase_bbh.txt", "like_ligo_lisa_phase_bbh.pdf", true_parameter_values = true_vals, ranges=ptranges, string=False)
     make_plot("samples_ligo_lisa_tiango_phase_bbh.txt", "like_ligo_lisa_tiango_phase_bbh.pdf", true_parameter_values = true_vals, ranges=ptranges, string=False)
     make_plot("samples_ligo_lisa_decigo_phase_bbh.txt", "like_ligo_lisa_decigo_phase_bbh.pdf", true_parameter_values = true_vals, ranges=ptranges, string=False)
