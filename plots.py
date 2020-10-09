@@ -165,8 +165,8 @@ def make_foreground_plot():
     plt.loglog(freqs, omegacs, "--", color="pink", label=r"CS: $G\mu = 10^{-16}$")
 
     pt = gravmidband.PhaseTransition()
-    omegacs = pt.OmegaGW(freqs, Ts=1e10, alpha=0.001)
-    plt.loglog(freqs, omegacs, "-", color="brown", label=r"PT: $T_* = 10^{10}$ GeV $\alpha=0.001$")
+    omegacs = pt.OmegaGW(freqs, Ts=1e6, alpha=0.5, beta=40)
+    plt.loglog(freqs, omegacs, "-", color="green", label=r"PT")
 
     plt.legend(loc="upper left", ncol=2)
     plt.xlabel("f (Hz)")
