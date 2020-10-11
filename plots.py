@@ -103,6 +103,7 @@ def make_pls_plot():
     plt.xlabel("f (Hz)")
     plt.ylabel(r"$\Omega_{GW}$")
     plt.ylim(1e-16, 1e-4)
+    plt.xlim(1e-6, 1e4)
     plt.tight_layout()
     plt.savefig("pls.pdf")
 
@@ -172,6 +173,7 @@ def make_foreground_plot():
     plt.xlabel("f (Hz)")
     plt.ylabel(r"$\Omega_{GW}$")
     plt.ylim(1e-16, 1e-4)
+    plt.xlim(1e-6, 1e3)
     plt.tight_layout()
     plt.savefig("foreground.pdf")
 
@@ -204,6 +206,7 @@ def make_string_plot():
     plt.xlabel("f (Hz)")
     plt.ylabel(r"$\Omega_{GW}$")
     plt.ylim(1e-16, 1e-4)
+    plt.xlim(1e-6, 1e3)
     plt.tight_layout()
     plt.savefig("strings.pdf")
 
@@ -230,10 +233,10 @@ def make_pt_plot():
     #plt.loglog(freqs, omegacs, ":", color="grey", label=r"PT: $T_* = 10^{-1} \;\mathrm{GeV}$")
 
     omegacs = csgw.OmegaGW(freqs, Ts=1e6, alpha=0.05, beta=40)
-    plt.loglog(freqs, omegacs, "-", color="brown", label=r"$\alpha=0.01$")
+    plt.loglog(freqs, omegacs, "-", color="brown", label=r"$\alpha=0.05$")
 
-    omegacs = csgw.OmegaGW(freqs, Ts=1e6, alpha=0.5, beta=4)
-    plt.loglog(freqs, omegacs, "-", color="pink", label=r"$\beta = 4$")
+    omegacs = csgw.OmegaGW(freqs, Ts=1e6, alpha=0.5, beta=100)
+    plt.loglog(freqs, omegacs, "-", color="pink", label=r"$\beta = 100$")
 
     omegacs = csgw.OmegaGW(freqs, Ts=1e4, alpha=0.5, beta=40)
     plt.loglog(freqs, omegacs, ":", color="grey", label=r"$T_* = 10^{4}$ GeV")
