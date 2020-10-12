@@ -42,6 +42,8 @@ def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None, stri
         ticklabels = {pnames[0] : [r"$10^{2}$", r"$10^{4}$", r"$10^{6}$"]}#, r"$10^{11}$"]},
                       #pnames[4]: [r"$10^{-4}$", r"$10^{-3}$", r"$0.01$", r"$0.1$", r"$1.0$"]}
 
+    ax = subplot_instance.subplots[0, 0]
+    ax.set_visible(False)
     for pi in range(samples.shape[1]):
         for pi2 in range(pi + 1):
             #Place horizontal and vertical lines for the true point
