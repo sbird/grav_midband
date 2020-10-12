@@ -155,19 +155,19 @@ def make_foreground_plot():
 
     emri = gravmidband.EMRIGWB()
     omegaemri = emri.OmegaGW(freqs)
-    plt.loglog(freqs, omegaemri, ":", color="gold", label="EMRI mergers")
+    plt.loglog(freqs, omegaemri, "-", color="green", label="EMRI")
 
     imri = gravmidband.IMRIGWB()
-    omegaimri = imri.OmegaGW(freqs)
-    plt.loglog(freqs, omegaimri, ":", color="purple", label="IMRI")
+    omegaimri = imri.OmegaGW(freqs, Norm = 0.004)
+    plt.loglog(freqs, omegaimri, "--", color="purple", label="IMRI")
 
-    csgw = gravmidband.CosmicStringGWB()
-    omegacs = csgw.OmegaGW(freqs, Gmu=1.e-16)
-    plt.loglog(freqs, omegacs, "--", color="pink", label=r"CS: $G\mu = 10^{-16}$")
+#     csgw = gravmidband.CosmicStringGWB()
+#     omegacs = csgw.OmegaGW(freqs, Gmu=1.e-16)
+#     plt.loglog(freqs, omegacs, "--", color="pink", label=r"CS: $G\mu = 10^{-16}$")
 
-    pt = gravmidband.PhaseTransition()
-    omegacs = pt.OmegaGW(freqs, Ts=1e6, alpha=0.5, beta=40)
-    plt.loglog(freqs, omegacs, "-", color="green", label=r"PT")
+#     pt = gravmidband.PhaseTransition()
+#     omegacs = pt.OmegaGW(freqs, Ts=1e6, alpha=0.5, beta=40)
+#     plt.loglog(freqs, omegacs, "-", color="green", label=r"PT")
 
     plt.legend(loc="upper left", ncol=2)
     plt.xlabel("f (Hz)")
