@@ -1023,7 +1023,6 @@ if __name__=="__main__":
     procs.append(Process(target=like_run, args=("samples_ligo_lisa_decigo_phase_bbh_cosmo.txt",("lisa","bdecigo"), False, True, 0, 1e5, 0.2)))
 
     #LISA only
-    procs = []
     procs.append(Process(target=like_run, args=("samples_ligo_lisa_string_bbh.txt","lisa", True, False)))
     #LISA + DECIGO
     procs.append(Process(target=like_run, args=("samples_ligo_lisa_decigo_string_bbh.txt",("lisa","bdecigo"), True, False)))
