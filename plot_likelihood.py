@@ -6,7 +6,7 @@ import getdist as gd
 import getdist.plots as gdp
 matplotlib.use('PDF')
 
-def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None, string=True):
+def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None, string=True, burnin=10000):
     """Make a getdist plot"""
     samples = np.loadtxt(chainfile)
     ticks = {}
@@ -17,7 +17,7 @@ def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None, stri
     prange = None
     if ranges is not None:
         prange = {pnames[i] : ranges[i] for i in range(len(pnames))}
-    posterior_MCsamples = gd.MCSamples(samples=samples, names=pnames, labels=pnames, label='', ranges=prange)
+    posterior_MCsamples = gd.MCSamples(samples=samples[burnin:], names=pnames, labels=pnames, label='', ranges=prange)
 
     print("Sim=",savefile)
     #Get and print the confidence limits

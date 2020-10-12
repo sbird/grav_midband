@@ -440,7 +440,7 @@ class Likelihoods:
         #print(np.exp(params[0]), like)
         return llike
 
-    def do_sampling(self, savefile, nwalkers=100, burnin=300, nsamples = 300, while_loop=True, maxsample=200):
+    def do_sampling(self, savefile, nwalkers=100, burnin=600, nsamples = 300, while_loop=True, maxsample=200):
         """Do the sampling with emcee"""
         #Limits
         if self.cstring is not None:
@@ -458,7 +458,12 @@ class Likelihoods:
         emcee_sampler = emcee.EnsembleSampler(nwalkers, np.size(pr), self.lnlikelihood)
         pos, _, _ = emcee_sampler.run_mcmc(p0, burnin)
         #Check things are reasonable
+        print(emcee_sampler.acceptance_fraction)
         assert np.all(emcee_sampler.acceptance_fraction > 0.01)
+        emcee_sampler.reset()
+        emcee_sampler = emcee.EnsembleSampler(nwalkers, np.size(pr), self.lnlikelihood)
+        pos, _, _ = emcee_sampler.run_mcmc(p0, burnin)
+        print(emcee_sampler.acceptance_fraction)
         emcee_sampler.reset()
         self.cur_results = emcee_sampler
         gr = 10.
