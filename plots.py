@@ -232,11 +232,14 @@ def make_pt_plot():
     #omegacs = csgw.OmegaGW(freqs, Ts=0.1)
     #plt.loglog(freqs, omegacs, ":", color="grey", label=r"PT: $T_* = 10^{-1} \;\mathrm{GeV}$")
 
+    omegacs = csgw.OmegaGW(freqs, Ts=1e6, alpha=0.5, beta=40)
+    plt.loglog(freqs, omegacs, "-", color="green", label=r"Fiducial")
+
     omegacs = csgw.OmegaGW(freqs, Ts=1e6, alpha=0.05, beta=40)
-    plt.loglog(freqs, omegacs, "-", color="brown", label=r"$\alpha=0.05$")
+    plt.loglog(freqs, omegacs, "--", color="brown", label=r"$\alpha=0.05$")
 
     omegacs = csgw.OmegaGW(freqs, Ts=1e6, alpha=0.5, beta=100)
-    plt.loglog(freqs, omegacs, "-", color="pink", label=r"$\beta = 100$")
+    plt.loglog(freqs, omegacs, "-.", color="pink", label=r"$\beta = 100$")
 
     omegacs = csgw.OmegaGW(freqs, Ts=1e4, alpha=0.5, beta=40)
     plt.loglog(freqs, omegacs, ":", color="grey", label=r"$T_* = 10^{4}$ GeV")
@@ -246,9 +249,6 @@ def make_pt_plot():
 
     #omegacs = csgw.OmegaGW(freqs, Ts=1e4, alpha=10)
     #plt.loglog(freqs, omegacs, "-", color="orange", label=r"PT: $\alpha=10 T_* = 10^{4} \;\mathrm{GeV}$")
-
-    omegacs = csgw.OmegaGW(freqs, Ts=1e6, alpha=0.5, beta=40)
-    plt.loglog(freqs, omegacs, "-", color="green", label=r"Fiducial")
 
     #omegacs = csgw.OmegaGW(freqs, Ts=1e6, alpha=1.5)
     #plt.loglog(freqs, omegacs, "-", color="green", label=r"PT: $T_* = 10^{6} \;\mathrm{GeV}$")
