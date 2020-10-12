@@ -329,7 +329,7 @@ class Likelihoods:
     """Class to perform likelihood analysis on SGWB.
     Args:
     """
-    def __init__(self, strings=True, phase = False, imri = True, emri=True, ligo = True, satellites="lisa"):
+    def __init__(self, strings=True, phase = False, imri = True, emri=True, ligo = True, satellites="lisa", gmu = 0, ts=1e10, alpha=1e-9):
         self.ureg = ureg
         self.binarybh = BinaryBHGWB()
 
@@ -363,11 +363,11 @@ class Likelihoods:
         if self.cstring is not None:
             #This is the "true" model we are trying to detect: no cosmic strings,
             #LIGO current best fit merger rate, Fiducial IMRI & EMRI rates.
-            self.trueparams = [0, 56., 0.005, 1]
+            self.trueparams = [gmu, 56., 0.005, 1]
         elif self.phase is not None:
             #Phase transition parameters being zero will lead to divide by zero,
             #so just make them small and the frequency high.
-            self.trueparams = [1e10, 56., 0.005, 1, 1e-9]
+            self.trueparams = [ts, 56., 0.005, 1, alpha]
         self.experiments = [SGWBExperiment(binarybh = self.binarybh, imribh = self.imribh, emribh=self.emribh, cstring = self.cstring, phase = self.phase, sensitivity = sens, trueparams = self.trueparams) for sens in self.sensitivities]
 
         #Expected number of ligo detections at time of LISA launch for the BBH amplitude prior.
@@ -998,14 +998,30 @@ def test_cs():
     tot = cs.OmegaGW([1e-6,20], 1e-11)
     assert np.all(np.abs(tot - np.array([1.05797682e-09, 1.69091713e-10])) < 2.e-3)
 
-def like_run(savefile, satellites, strings, phase):
+def like_run(savefile, satellites, strings, phase, gmu=0, ts=1e10, alpha=1e-9):
     """Small function to do the sampling"""
-    like = Likelihoods(imri=True, emri=True, strings=strings, phase=phase, ligo = True, satellites=satellites)
+    like = Likelihoods(imri=True, emri=True, strings=strings, phase=phase, ligo = True, satellites=satellites, gmu=gmu, ts=ts, alpha=alpha)
     like.do_sampling(savefile = savefile)
 
 if __name__=="__main__":
     #Spawn jobs in parallel
     from multiprocessing import Process
+    #With cosmological source.
+    #LISA only
+    procs = []
+    procs.append(Process(target=like_run, args=("samples_ligo_lisa_string_bbh_cosmo.txt","lisa", True, False, 4e-11, 1e10, 1e-9)))
+    #LISA + DECIGO
+    procs.append(Process(target=like_run, args=("samples_ligo_lisa_decigo_string_bbh_cosmo.txt",("lisa","bdecigo"), True, False, 4e-11, 1e10, 1e-9)))
+    #LISA + TianGo
+    procs.append(Process(target=like_run, args=("samples_ligo_lisa_tiango_string_bbh_cosmo.txt",("lisa","tiango"), True, False, 4e-11, 1e10, 1e-9)))
+
+    #LISA only with phase transition
+    procs.append(Process(target=like_run, args=("samples_ligo_lisa_phase_bbh_cosmo.txt","lisa", False, True, 0, 1e5, 0.2)))
+    #LISA+TianGo with phase transition
+    procs.append(Process(target=like_run, args=("samples_ligo_lisa_tiango_phase_bbh_cosmo.txt",("lisa","tiango"), False, True, 0, 1e5, 0.2)))
+    #LISA+DECIGO with phase transition
+    procs.append(Process(target=like_run, args=("samples_ligo_lisa_decigo_phase_bbh_cosmo.txt",("lisa","bdecigo"), False, True, 0, 1e5, 0.2)))
+
     #LISA only
     procs = []
     procs.append(Process(target=like_run, args=("samples_ligo_lisa_string_bbh.txt","lisa", True, False)))
