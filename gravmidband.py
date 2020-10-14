@@ -219,16 +219,17 @@ class SGWBExperiment:
        presenting a consistent interface for different experiments."""
     def __init__(self, binarybh, sensitivity, trueparams, imribh=None, emribh=None, cstring=None, phase=None):
         self.cstring = cstring
+        self.phase = phase
         self.sensitivity = sensitivity
         self.freq, self.omegasens = sensitivity.omegadens()
         self.length = sensitivity.length
         self.bbh_singleamp = binarybh.OmegaGW(self.freq, Norm=1)
         self.mockdata = self.bhbinarymerger(trueparams[1])
+
         if cstring:
             self.mockdata += self.cosmicstringmodel(trueparams[0])
         elif phase and trueparams[-1] > 1e-5:
             self.mockdata += self.phasemodel(trueparams[0], trueparams[-1])
-        self.phase = phase
 
         if self.phase is not None and self.cstring is not None:
             raise ValueError("Must use Cosmic strings or Phase Transition, not both")
