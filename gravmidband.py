@@ -223,8 +223,11 @@ class SGWBExperiment:
         self.freq, self.omegasens = sensitivity.omegadens()
         self.length = sensitivity.length
         self.bbh_singleamp = binarybh.OmegaGW(self.freq, Norm=1)
-        self.mockdata = self.cosmicstringmodel(trueparams[0])
-        self.mockdata += self.bhbinarymerger(trueparams[1])
+        self.mockdata = self.bhbinarymerger(trueparams[1])
+        if cstring:
+            self.mockdata += self.cosmicstringmodel(trueparams[0])
+        else if phase and trueparams[-1] > 1e-5:
+            self.mockdata += self.phasemodel(trueparams[0], trueparams[-1])
         self.phase = phase
 
         if self.phase is not None and self.cstring is not None:
@@ -458,12 +461,12 @@ class Likelihoods:
         emcee_sampler = emcee.EnsembleSampler(nwalkers, np.size(pr), self.lnlikelihood)
         pos, _, _ = emcee_sampler.run_mcmc(p0, burnin)
         #Check things are reasonable
-        print(emcee_sampler.acceptance_fraction)
+        #print(emcee_sampler.acceptance_fraction)
         assert np.all(emcee_sampler.acceptance_fraction > 0.01)
         emcee_sampler.reset()
         emcee_sampler = emcee.EnsembleSampler(nwalkers, np.size(pr), self.lnlikelihood)
         pos, _, _ = emcee_sampler.run_mcmc(p0, burnin)
-        print(emcee_sampler.acceptance_fraction)
+        #print(emcee_sampler.acceptance_fraction)
         emcee_sampler.reset()
         self.cur_results = emcee_sampler
         gr = 10.
