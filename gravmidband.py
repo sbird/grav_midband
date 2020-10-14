@@ -226,7 +226,7 @@ class SGWBExperiment:
         self.mockdata = self.bhbinarymerger(trueparams[1])
         if cstring:
             self.mockdata += self.cosmicstringmodel(trueparams[0])
-        else if phase and trueparams[-1] > 1e-5:
+        elif phase and trueparams[-1] > 1e-5:
             self.mockdata += self.phasemodel(trueparams[0], trueparams[-1])
         self.phase = phase
 
