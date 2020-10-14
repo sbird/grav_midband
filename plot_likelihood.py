@@ -64,6 +64,24 @@ def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None, stri
     plt.savefig(savefile)
 
 if __name__ == "__main__":
+    #Models including a cosmo signal
+    #For PT
+    true_vals = [np.log(1e5), 56., 0.005, 1, 0.2]
+    #ranges
+    ptranges = [[np.log(100), np.log(1e7)], [0, 100], [0,1], [0.1,10], [0.001,0.8]]#, [1, 1000]]
+    make_plot("samples_ligo_lisa_phase_bbh_cosmo.txt", "like_ligo_lisa_phase_bbh_cosmo.pdf", true_parameter_values = true_vals, ranges=ptranges, string=False)
+    make_plot("samples_ligo_lisa_tiango_phase_bbh_cosmo.txt", "like_ligo_lisa_tiango_phase_bbh_cosmo.pdf", true_parameter_values = true_vals, ranges=ptranges, string=False)
+    make_plot("samples_ligo_lisa_decigo_phase_bbh_cosmo.txt", "like_ligo_lisa_decigo_phase_bbh_cosmo.pdf", true_parameter_values = true_vals, ranges=ptranges, string=False)
+
+    #For strings
+    true_vals = [np.log(1e-16), 56., 0.005, 1]
+    #ranges
+    srranges = [[np.log(1e-20), np.log(2e-13)], [55.5, 56.5], [0.0048,0.0051], [0.985,1.015]]
+    make_plot("samples_ligo_lisa_string_bbh_cosmo.txt", "like_ligo_lisa_string_bbh_cosmo.pdf", true_parameter_values = true_vals, ranges=srranges)
+    srranges = [[np.log(1e-20), np.log(2e-13)], [55.7, 56.3], [0.00495,0.00505], [0.995,1.005]]
+    make_plot("samples_ligo_lisa_tiango_string_bbh_cosmo.txt", "like_ligo_lisa_tiango_string_bbh_cosmo.pdf", true_parameter_values = true_vals, ranges=srranges)
+    make_plot("samples_ligo_lisa_decigo_string_bbh_cosmo.txt", "like_ligo_lisa_decigo_string_bbh_cosmo.pdf", true_parameter_values = true_vals, ranges=srranges)
+
     #For PT
     true_vals = [np.nan, 56., 0.005, 1, np.nan, np.nan]
     #ranges
