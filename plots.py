@@ -76,8 +76,8 @@ def make_sgwb_plot():
 
 def make_pls_plot():
     """Make a power law sensitivity plot"""
-    alphas = {"lisa": 0.3, "tiango": 0.2}
-    for sat in ("lisa", "tiango"):
+    alphas = {"lisa": 0.3, "tiango": 0.2, "bdecigo":0.15}
+    for sat in ("lisa", "tiango", "bdecigo"):
         ss = gravmidband.PowerLawSensitivity(satellites = sat, ligo=False)
         sff,_ = ss.sensitivities[0].PSD()
         spo = ss.omegapls(sff)
@@ -88,21 +88,26 @@ def make_pls_plot():
     gopo = ligo.omegapls(goff)
     plt.fill_between(goff, y1=gopo, y2=1, color="grey", alpha=0.5, linewidth=0)
 
-    total = gravmidband.PowerLawSensitivity(ligo=True, satellites=["lisa", "tiango"])
-    freq = np.logspace(-6, 4, 150)
-    plstot = total.omegapls(freq)
-    plt.loglog(freq, plstot, color="black", label="Total", ls="--")
     total = gravmidband.PowerLawSensitivity(ligo=False, satellites=["lisa", "tiango"])
     freq = np.logspace(-6, 4, 150)
     plstot = total.omegapls(freq)
-    plt.loglog(freq, plstot, color="brown", label="Satellites")
-    plt.legend(loc="lower right")
+    plt.loglog(freq, plstot, color="brown", label="LISA & TIANGO")
+    total = gravmidband.PowerLawSensitivity(ligo=False, satellites=["lisa", "bdecigo"])
+    freq = np.logspace(-6, 4, 150)
+    plstot = total.omegapls(freq)
+    plt.loglog(freq, plstot, color="blue", ls="-.", label="LISA & B-DECIGO")
+    total = gravmidband.PowerLawSensitivity(ligo=True, satellites=["lisa", "tiango"])
+    freq = np.logspace(-6, 4, 150)
+    plstot = total.omegapls(freq)
+    plt.loglog(freq, plstot, color="black", label="LIGO & LISA & TIANGO", ls="--")
+    plt.legend(loc="lower left")
     plt.text(5e-4,1e-8,"LISA")
     plt.text(0.05,1e-8,"TIANGO")
+    plt.text(1,1e-13,"B-DECIGO")
     plt.text(30,1e-8,"LIGO")
     plt.xlabel("f (Hz)")
     plt.ylabel(r"$\Omega_{GW}$")
-    plt.ylim(1e-16, 1e-4)
+    plt.ylim(5e-18, 1e-4)
     plt.xlim(1e-6, 1e4)
     plt.tight_layout()
     plt.savefig("pls.pdf")
@@ -232,17 +237,17 @@ def make_pt_plot():
     #omegacs = csgw.OmegaGW(freqs, Ts=0.1)
     #plt.loglog(freqs, omegacs, ":", color="grey", label=r"PT: $T_* = 10^{-1} \;\mathrm{GeV}$")
 
-    omegacs = csgw.OmegaGW(freqs, Ts=1e6, alpha=0.5, beta=40)
+    omegacs = csgw.OmegaGW(freqs, Ts=1e5, alpha=0.5, beta=40)
     plt.loglog(freqs, omegacs, "-", color="green", label=r"Fiducial")
 
-    omegacs = csgw.OmegaGW(freqs, Ts=1e6, alpha=0.05, beta=40)
+    omegacs = csgw.OmegaGW(freqs, Ts=1e5, alpha=0.05, beta=40)
     plt.loglog(freqs, omegacs, "--", color="brown", label=r"$\alpha=0.05$")
 
-    omegacs = csgw.OmegaGW(freqs, Ts=1e6, alpha=0.5, beta=100)
+    omegacs = csgw.OmegaGW(freqs, Ts=1e5, alpha=0.5, beta=100)
     plt.loglog(freqs, omegacs, "-.", color="pink", label=r"$\beta = 100$")
 
-    omegacs = csgw.OmegaGW(freqs, Ts=1e4, alpha=0.5, beta=40)
-    plt.loglog(freqs, omegacs, ":", color="grey", label=r"$T_* = 10^{4}$ GeV")
+    omegacs = csgw.OmegaGW(freqs, Ts=1e3, alpha=0.5, beta=40)
+    plt.loglog(freqs, omegacs, ":", color="grey", label=r"$T_* = 10^{3}$ GeV")
 
     #omegacs = csgw.OmegaGW(freqs, Ts=1e8, alpha=0.5, beta=40)
     #plt.loglog(freqs, omegacs, ":", color="blue", label=r"$T_* = 10^{8}$ GeV")
