@@ -34,16 +34,21 @@ def make_plot(chainfile, savefile, true_parameter_values=None, ranges=None, stri
 #     colour_array = np.array(['black', 'red', 'magenta', 'green', 'green', 'purple', 'turquoise', 'gray', 'red', 'blue'])
     #Ticks we want to show for each parameter
     if string:
-        ticks = {pnames[0]: [np.log(1e-20), np.log(1e-17), np.log(1e-15)]}
-        ticklabels = {pnames[0] : [r"$10^{-20}$", r"$10^{-17}$", r"$10^{-15}$"]}
+        if ranges[0][0] < np.log(1e-18):
+            ticks = {pnames[0]: [np.log(1e-20), np.log(1e-17), np.log(1e-15)]}
+            ticklabels = {pnames[0] : [r"$10^{-20}$", r"$10^{-17}$", r"$10^{-15}$"]}
+        else:
+            ticks = {pnames[0]: [np.log(1e-17), np.log(1e-16), np.log(1e-15)]}
+            ticklabels = {pnames[0] : [r"$10^{-17}$", r"$10^{-16}$", r"$10^{-15}$"]}
     else:
         ticks = {pnames[0]: [np.log(1e2),np.log(1e4), np.log(1e6)]}#, np.log(1e11)
                  #pnames[4]: [np.log(1e-4), np.log(1e-3), np.log(1e-2), np.log(0.1), 0]}
         ticklabels = {pnames[0] : [r"$10^{2}$", r"$10^{4}$", r"$10^{6}$"]}#, r"$10^{11}$"]},
                       #pnames[4]: [r"$10^{-4}$", r"$10^{-3}$", r"$0.01$", r"$0.1$", r"$1.0$"]}
 
-    ax = subplot_instance.subplots[0, 0]
-    ax.set_visible(False)
+    if np.isnan(true_parameter_values[0]):
+        ax = subplot_instance.subplots[0, 0]
+        ax.set_visible(False)
     for pi in range(samples.shape[1]):
         for pi2 in range(pi + 1):
             #Place horizontal and vertical lines for the true point
