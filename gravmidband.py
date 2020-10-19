@@ -1013,11 +1013,27 @@ if __name__=="__main__":
     #With cosmological source.
     #LISA only
     procs = []
+
+    procs.append(Process(target=like_run, args=("samples_ligo_lisa_string_bbh_cosmo_2.txt","lisa", True, False, 1e-15, 1e10, 1e-9)))
+    #LISA + DECIGO
+    procs.append(Process(target=like_run, args=("samples_ligo_lisa_decigo_string_bbh_cosmo_2.txt",("lisa","bdecigo"), True, False, 1e-15, 1e10, 1e-9)))
+    #LISA + TianGo
+    procs.append(Process(target=like_run, args=("samples_ligo_lisa_tiango_string_bbh_cosmo_2.txt",("lisa","tiango"), True, False, 1e-15, 1e10, 1e-9)))
+
     procs.append(Process(target=like_run, args=("samples_ligo_lisa_string_bbh_cosmo.txt","lisa", True, False, 1e-16, 1e10, 1e-9)))
     #LISA + DECIGO
     procs.append(Process(target=like_run, args=("samples_ligo_lisa_decigo_string_bbh_cosmo.txt",("lisa","bdecigo"), True, False, 1e-16, 1e10, 1e-9)))
     #LISA + TianGo
     procs.append(Process(target=like_run, args=("samples_ligo_lisa_tiango_string_bbh_cosmo.txt",("lisa","tiango"), True, False, 1e-16, 1e10, 1e-9)))
+
+    #Electroweak
+    #LISA only with phase transition
+    procs.append(Process(target=like_run, args=("samples_ligo_lisa_phase_bbh_cosmo_3.txt","lisa", False, True, 0, 5e3, 0.2)))
+    #LISA+TianGo with phase transition
+    procs.append(Process(target=like_run, args=("samples_ligo_lisa_tiango_phase_bbh_cosmo_3.txt",("lisa","tiango"), False, True, 0, 5e3, 0.2)))
+    #LISA+DECIGO with phase transition
+    procs.append(Process(target=like_run, args=("samples_ligo_lisa_decigo_phase_bbh_cosmo_3.txt",("lisa","bdecigo"), False, True, 0, 5e3, 0.2)))
+
 
     #LISA only with phase transition
     procs.append(Process(target=like_run, args=("samples_ligo_lisa_phase_bbh_cosmo.txt","lisa", False, True, 0, 1e5, 0.2)))
@@ -1025,6 +1041,13 @@ if __name__=="__main__":
     procs.append(Process(target=like_run, args=("samples_ligo_lisa_tiango_phase_bbh_cosmo.txt",("lisa","tiango"), False, True, 0, 1e5, 0.2)))
     #LISA+DECIGO with phase transition
     procs.append(Process(target=like_run, args=("samples_ligo_lisa_decigo_phase_bbh_cosmo.txt",("lisa","bdecigo"), False, True, 0, 1e5, 0.2)))
+
+    #LISA only with phase transition
+    procs.append(Process(target=like_run, args=("samples_ligo_lisa_phase_bbh_cosmo_2.txt","lisa", False, True, 0, 5e4, 0.2)))
+    #LISA+TianGo with phase transition
+    procs.append(Process(target=like_run, args=("samples_ligo_lisa_tiango_phase_bbh_cosmo_2.txt",("lisa","tiango"), False, True, 0, 5e4, 0.2)))
+    #LISA+DECIGO with phase transition
+    procs.append(Process(target=like_run, args=("samples_ligo_lisa_decigo_phase_bbh_cosmo_2.txt",("lisa","bdecigo"), False, True, 0, 5e4, 0.2)))
 
     #LISA only
     procs.append(Process(target=like_run, args=("samples_ligo_lisa_string_bbh.txt","lisa", True, False)))
