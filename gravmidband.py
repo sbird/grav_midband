@@ -1028,6 +1028,13 @@ if __name__=="__main__":
 
     #Electroweak
     #LISA only with phase transition
+    procs.append(Process(target=like_run, args=("samples_ligo_lisa_phase_bbh_cosmo_ewpt.txt","lisa", False, True, 0, 1e3, 0.2)))
+    #LISA+TianGo with phase transition
+    procs.append(Process(target=like_run, args=("samples_ligo_lisa_tiango_phase_bbh_cosmo_ewpt.txt",("lisa","tiango"), False, True, 0, 1e3, 0.2)))
+    #LISA+DECIGO with phase transition
+    procs.append(Process(target=like_run, args=("samples_ligo_lisa_decigo_phase_bbh_cosmo_ewpt.txt",("lisa","bdecigo"), False, True, 0, 1e3, 0.2)))
+
+    #LISA only with phase transition
     procs.append(Process(target=like_run, args=("samples_ligo_lisa_phase_bbh_cosmo_3.txt","lisa", False, True, 0, 5e3, 0.2)))
     #LISA+TianGo with phase transition
     procs.append(Process(target=like_run, args=("samples_ligo_lisa_tiango_phase_bbh_cosmo_3.txt",("lisa","tiango"), False, True, 0, 5e3, 0.2)))
