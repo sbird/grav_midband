@@ -10,9 +10,9 @@ def make_plot(chainfile, savefile, chainfile2=None, chainfile3=None, true_parame
     """Make a getdist plot"""
     ticks = {}
     if string:
-        pnames = [ r"G\mu", r"\mathrm{SMBBH}", r"\mathrm{IMRI}", r"\mathrm{EMRI}"]
+        pnames = [ r"G\mu", r"\mathrm{StMBBH}", r"\mathrm{IMRI}", r"\mathrm{EMRI}"]
     else:
-        pnames = [ r"T_\ast", r"\mathrm{SMBBH}", r"\mathrm{IMRI}", r"\mathrm{EMRI}", r"\alpha"]#, r"\beta"]
+        pnames = [ r"T_\ast", r"\mathrm{StMBBH}", r"\mathrm{IMRI}", r"\mathrm{EMRI}", r"\alpha"]#, r"\beta"]
     prange = None
     if ranges is not None:
         prange = {pnames[i] : ranges[i] for i in range(len(pnames))}
@@ -88,9 +88,9 @@ def make_single_plot(chainfile, savefile, chainfile2=None, pi1 = 0, pi2 = 3, tru
     """Make a getdist plot"""
     ticks = {}
     if string:
-        pnames = [ r"G\mu", r"\mathrm{SMBBH}", r"\mathrm{IMRI}", r"\mathrm{EMRI}"]
+        pnames = [ r"G\mu", r"\mathrm{StMBBH}", r"\mathrm{IMRI}", r"\mathrm{EMRI}"]
     else:
-        pnames = [ r"T_\ast", r"\mathrm{SMBBH}", r"\mathrm{IMRI}", r"\mathrm{EMRI}", r"\alpha"]#, r"\beta"]
+        pnames = [ r"T_\ast", r"\mathrm{StMBBH}", r"\mathrm{IMRI}", r"\mathrm{EMRI}", r"\alpha"]#, r"\beta"]
     prange = None
     if ranges is not None:
         prange = {pnames[i] : ranges[i] for i in range(len(pnames))}

@@ -49,7 +49,7 @@ def make_sgwb_plot():
 
     bbh = gravmidband.BinaryBHGWB()
     omegabbh = bbh.OmegaGW(freqs)
-    plt.loglog(freqs, omegabbh, "-.", color="red", label="SMBBH")
+    plt.loglog(freqs, omegabbh, "-.", color="red", label="StMBBH")
 
     emri = gravmidband.EMRIGWB()
     omegaemri = emri.OmegaGW(freqs)
