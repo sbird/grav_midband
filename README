@@ -1,0 +1,21 @@
+This repository contains code for reproducing Barish, Bird & Cui (tbd). 
+
+The python scripts generate models for stochastic gravitational wave background sources,
+and perform likelihood evaluations using standard sensitivity curves for GW experiments.
+
+SGWB models included are:
+- Stellar binaries
+- IMRIs (assumed to be like stellar binaries)
+- Cosmic strings
+- Phase transitions
+
+EMRIs are included but you must obtain the datafile from the authors of Babak et al 2010.
+
+Experiments included are:
+- LIGO A+
+- TianGo
+- B-DECIGO/AEDGE
+- LISA
+- A generic satellite experiment
+
+
