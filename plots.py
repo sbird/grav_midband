@@ -6,24 +6,6 @@ import gravmidband
 
 #matplotlib.use("PDF")
 
-def sensitivity():
-    """Make non-modified sens. plots"""
-    #These contain characteristic strain, NOT power spectral density.
-    for js in ("DECIGO.json", "LISA.json", "TianQin.json"):
-        ff = open(js)
-        jsdata = json.load(ff)
-        data = np.array(jsdata["data"])
-        plt.loglog(data[:,0], data[:,1]/np.sqrt(data[:,0]), label=js)
-    lisa = gravmidband.LISASensitivity()
-    plt.loglog(lisa.lisa[:,0], lisa.lisa[:,1], label="LISA MakeCurve")
-
-    for sat in ("lisa", "tiango", "bdecigo"):
-        ss = gravmidband.SatelliteSensitivity(satellite = sat)
-        sff, spo = ss.PSD()
-        plt.loglog(sff, spo, "--", label=sat)
-    plt.legend()
-
-
 def make_sgwb_plot():
     """Plot an example stochastic gravitational wave background"""
     ligo = gravmidband.LIGOSensitivity()
