@@ -18,4 +18,10 @@ Experiments included are:
 - LISA
 - A generic satellite experiment
 
+The completed chains are included, stored as gzipped files in git lfs on github. To obtain them do:
 
+git lfs install
+git lfs checkout
+
+and then unzip them with:
+gunzip samples*
