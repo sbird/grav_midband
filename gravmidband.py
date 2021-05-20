@@ -689,7 +689,7 @@ class EMRIGWB:
     """Uses the EMRI SGWB from Bonetti & Sesana, 2007.14403"""
     def __init__(self):
         self.hub = ((67.9 * ureg('km/s/Mpc')).to("1/s").magnitude)
-        #Model 1 which is fiducial
+        #Model 1 which is fiducial: contact Matteo Bonetti (matteo.bonetti1990@gmail.com) for this datafile.
         bonetti = np.loadtxt("hc_EMRImodel1nospin_4.0yr_Babak20.txt")
         self.freq = bonetti[1:-1,0]
         #Use the model with detected signals removed
