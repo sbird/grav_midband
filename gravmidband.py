@@ -682,7 +682,8 @@ class IMRIGWB(BinaryBHGWB):
         zp1ring = lambda m2 : min([zmax, self.fqnrV2(m2)/ff])
         zp1minerge = lambda m2 : min([zmax, max([zmin, self.fmergerV2(m2)/ff])])
         omegamerg, _ = scipy.integrate.dblquad(ommerg, m2min, m2max, zp1minerge, zp1ring)
-        return m1integral * (omegagwz + omegamerg)
+        normfac = (m2max - m2min) * (50**(alpha+1) - 5**(alpha+1))/(alpha+1)
+        return m1integral * (omegagwz + omegamerg) / normfac
 
     def OmegaGW(self, freq, Norm=0.005, alpha=-2.3, m2min=1000, m2max=1e4):
         """OmegaGW as a function of frequency. Normalization is in units of mergers per Gpc^3 per year."""
