@@ -1,4 +1,4 @@
-This repository contains code for reproducing Barish, Bird & Cui (tbd). 
+This repository contains code for reproducing Barish, Bird & Cui (2012.07874).
 
 The python scripts generate models for stochastic gravitational wave background sources,
 and perform likelihood evaluations using standard sensitivity curves for GW experiments.
