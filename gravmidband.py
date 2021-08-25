@@ -633,8 +633,8 @@ class BinaryBHGWB:
         omegamerg, _ = scipy.integrate.tplquad(ommerg, 5, m1max, _m2min, _m2max, zp1minerge, zp1ring)
         return (omegagwz + omegamerg)/normfac
 
-    def OmegaGW(self, freq, Norm=56., alpha=-2.3, m2min=5, m2max=50):
-        """OmegaGW as a function of frequency. Normalization is in units of mergers per Gpc^3 per year. alpha is the power law of the mass distribution assumed. We are reasonably insensitive to this, so we do not vary it in the chain."""
+    def OmegaGW(self, freq, Norm=23.9, alpha=-2.3, m2min=5, m2max=50):
+        """OmegaGW as a function of frequency. Normalization is in units of mergers per Gpc^3 per year. alpha is the power law of the mass distribution assumed. We are reasonably insensitive to this, so we do not vary it in the chain. Default value is from https://arxiv.org/abs/2010.14533"""
         Hub = 67.9 * self.ureg("km/s/Mpc")
         omegagw_unnormed = np.array([self._omegagwz(ff, alpha=alpha, m2min=m2min, m2max = m2max) for ff in freq])
         #See eq. 2 of 1609.03565
@@ -685,15 +685,16 @@ class IMRIGWB(BinaryBHGWB):
         normfac = (m2max - m2min) * (50**(alpha+1) - 5**(alpha+1))/(alpha+1)
         return m1integral * (omegagwz + omegamerg) / normfac
 
-    def OmegaGW(self, freq, Norm=0.005, alpha=-2.3, m2min=1000, m2max=1e4):
-        """OmegaGW as a function of frequency. Normalization is in units of mergers per Gpc^3 per year."""
+    def OmegaGW(self, freq, Norm=0.4, alpha=-2.3, m2min=1000, m2max=1e4):
+        """OmegaGW as a function of frequency. Normalization is in units of mergers per Gpc^3 per year
+        and chosen so that the SGWB is comparable to that from LIGO."""
         return super().OmegaGW(freq, Norm=Norm, alpha = alpha, m2min=m2min, m2max=m2max)
 
 class EMRIGWB:
     """Uses the EMRI SGWB from Bonetti & Sesana, 2007.14403"""
     def __init__(self):
         self.hub = ((67.9 * ureg('km/s/Mpc')).to("1/s").magnitude)
-        #Model 1 which is fiducial: contact Matteo Bonetti (matteo.bonetti1990@gmail.com) for this datafile.
+        #Model 1 which is fiducial
         bonetti = np.loadtxt("hc_EMRImodel1nospin_4.0yr_Babak20.txt")
         self.freq = bonetti[1:-1,0]
         #Use the model with detected signals removed

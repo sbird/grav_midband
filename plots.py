@@ -145,7 +145,7 @@ def make_foreground_plot():
     plt.loglog(freqs, omegaemri, "-", color="green", label="EMRI")
 
     imri = gravmidband.IMRIGWB()
-    omegaimri = imri.OmegaGW(freqs, Norm = 0.004)
+    omegaimri = imri.OmegaGW(freqs)
     plt.loglog(freqs, omegaimri, "--", color="purple", label="IMRI")
 
 #     csgw = gravmidband.CosmicStringGWB()
